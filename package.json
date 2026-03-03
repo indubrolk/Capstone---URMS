@@ -1,12 +1,14 @@
 {
-  "name": "my-app",
+  "name": "urms-unilink",
+  "description": "URMS Sabaragamuwa Capstone",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "scaffold": "echo 'URMS scaffold ready!'"
   },
   "dependencies": {
     "react": "19.2.0",

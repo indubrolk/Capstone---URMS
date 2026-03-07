@@ -1,4 +1,5 @@
 import "./globals.css"
+import { AuthProvider } from "@/lib/auth-context"
 
 export default function RootLayout({
   children,
@@ -19,7 +20,9 @@ export default function RootLayout({
             </div>
           </div>
         </nav>
-        <main>{children}</main>
+        <AuthProvider>
+          <main>{children}</main>
+        </AuthProvider>
       </body>
     </html>
   )

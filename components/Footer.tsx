@@ -8,9 +8,11 @@ export default function Footer() {
                 {/* Brand */}
                 <div className="col-span-1 md:col-span-2">
                     <div className="flex items-center gap-2 text-white font-bold text-2xl mb-4 tracking-tight">
-                        <div className="bg-brand-primary text-white p-1 rounded-lg">
-                            <Landmark className="w-6 h-6" />
-                        </div>
+                        <img
+                            src="/urms-logo.png"
+                            alt="URMS Logo"
+                            className="w-8 h-8 rounded-lg bg-white p-0.5"
+                        />
                         <span>UniLink</span>
                     </div>
                     <p className="max-w-sm text-slate-400 leading-relaxed text-[15px]">

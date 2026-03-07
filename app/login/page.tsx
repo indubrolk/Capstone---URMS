@@ -56,8 +56,12 @@ export default function LoginPage() {
                 </div>
 
                 <div className="relative z-10 flex flex-col gap-4 max-w-md">
-                    <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-xl w-fit">
-                        <Landmark className="w-8 h-8 text-white" />
+                    <div className="bg-white p-2 rounded-xl w-fit shadow-xl border border-white/20">
+                        <img
+                            src="/urms-logo.png"
+                            alt="URMS Logo"
+                            className="w-10 h-10 object-contain"
+                        />
                     </div>
                     <h2 className="text-4xl font-black text-white leading-tight">
                         Streamlining <br />

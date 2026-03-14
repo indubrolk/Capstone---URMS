@@ -5,13 +5,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "scaffold": "echo 'URMS scaffold ready!'"
+    "scaffold": "echo 'URMS scaffold ready!'",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
+    "concurrently": "^9.2.1",
     "express": "^5.2.1",
+    "firebase": "^12.10.0",
     "lucide-react": "^0.577.0",
     "next": "16.0.1",
     "react": "19.2.0",
@@ -19,12 +25,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.10.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.6",
     "typescript": "^5"
   }
 }

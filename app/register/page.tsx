@@ -3,7 +3,13 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X } from "lucide-react";
+import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X, CheckCircle } from "lucide-react";
+import {
+    createUserWithEmailAndPassword,
+    sendEmailVerification,
+    updateProfile,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -14,6 +20,7 @@ export default function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const validateForm = () => {
@@ -44,6 +51,7 @@ export default function RegisterPage() {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccess(null);
 
         if (!validateForm()) {
             return;
@@ -51,11 +59,12 @@ export default function RegisterPage() {
 
         setLoading(true);
         try {
-            // Simulate API call for registration
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log("Registration simulated for:", { fullName, email });
-            // For now, redirect to login after successful UI registration simulation
-            router.push("/login");
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            if (fullName.trim()) {
+                await updateProfile(userCredential.user, { displayName: fullName.trim() });
+            }
+            await sendEmailVerification(userCredential.user);
+            setSuccess("Verification email sent. Please check your inbox before signing in.");
         } catch (err: unknown) {
             setError("Registration failed. Please try again.");
             console.error(err);
@@ -201,6 +210,14 @@ export default function RegisterPage() {
                                     <X className="w-3" />
                                 </div>
                                 <p className="text-sm font-bold text-red-600 leading-tight">{error}</p>
+                            </div>
+                        )}
+                        {success && (
+                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="p-1 bg-emerald-500 rounded-full text-white">
+                                    <CheckCircle className="w-3" />
+                                </div>
+                                <p className="text-sm font-bold text-emerald-700 leading-tight">{success}</p>
                             </div>
                         )}
 

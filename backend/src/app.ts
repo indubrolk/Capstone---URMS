@@ -16,8 +16,11 @@ app.get('/api/health', (req: Request, res: Response) => {
     res.status(200).json({ status: 'success', message: 'URMS Backend is running' });
 });
 
+import resourceRoutes from './routes/resource.routes';
+
 // Import and use routes here
 // app.use('/api/users', userRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

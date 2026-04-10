@@ -32,7 +32,7 @@ export const createResource = async (req: Request, res: Response): Promise<void>
 
 export const updateResource = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id = parseInt(req.params.id as string);
+        const id = parseInt(String(req.params.id));
         const updates = req.body; // Can contain status, name, category, capacity, location
 
         if (Object.keys(updates).length === 0) {
@@ -56,7 +56,7 @@ export const updateResource = async (req: Request, res: Response): Promise<void>
 
 export const deleteResource = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id = parseInt(req.params.id as string);
+        const id = parseInt(String(req.params.id));
         const success = await ResourceModel.delete(id);
 
         if (!success) {

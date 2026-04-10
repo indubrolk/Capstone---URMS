@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run dev:all",
     "dev:backend": "cd backend && npm run dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "dev:all": "concurrently \"next dev\" \"npm run dev:backend\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -16,9 +16,11 @@
   },
   "dependencies": {
     "concurrently": "^9.2.1",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase": "^12.10.0",
     "lucide-react": "^0.577.0",
+    "mysql2": "^3.20.0",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, Loader2, FlaskConical, Building2, DoorOpen, Package } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 interface AddResourceModalProps {
@@ -8,6 +8,14 @@ interface AddResourceModalProps {
     onSuccess: () => void;
 }
 
+const CATEGORIES = ['Lecture Halls', 'Labs', 'Rooms', 'Equipment', 'Vehicles'];
+const STATUSES = ['Available', 'Booked', 'Maintenance'];
+
+const EQUIPMENT_OPTIONS = [
+    'Projector', 'Whiteboard', 'Air Conditioning', 'Wi-Fi', 'Computers',
+    'Microscopes', 'Audio System', 'CCTV', 'Smart Board',
+];
+
 export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddResourceModalProps) {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
@@ -15,7 +23,8 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
         category: 'Lecture Halls',
         capacity: '',
         location: '',
-        status: 'Available'
+        equipment: [] as string[],
+        status: 'Available',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -27,30 +36,37 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const toggleEquipment = (item: string) => {
+        setFormData(prev => ({
+            ...prev,
+            equipment: prev.equipment.includes(item)
+                ? prev.equipment.filter(e => e !== item)
+                : [...prev.equipment, item],
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
-
         try {
             const token = user ? await user.getIdToken() : 'dev-token';
-
             const response = await fetch('http://localhost:5000/api/resources', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(formData),
             });
-
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.message || 'Failed to create resource');
             }
-
             onSuccess();
             onClose();
+            // reset
+            setFormData({ name: '', category: 'Lecture Halls', capacity: '', location: '', equipment: [], status: 'Available' });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -59,98 +75,143 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Add Resource</h2>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-200 transition-colors">
-                        <X className="w-5 h-5 text-slate-500" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div
+                className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-7 py-5 border-b border-slate-100">
+                    <div>
+                        <h2 className="text-xl font-bold text-[#1E3A8A]">Add New Resource</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">Fill in the details below to create a resource</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-8 overflow-y-auto">
+                {/* Body */}
+                <div className="overflow-y-auto flex-1 px-7 py-6">
                     {error && (
-                        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-semibold border border-red-100 flex items-center gap-3">
-                            <X className="w-5 h-5" />
+                        <div className="mb-5 p-3.5 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2">
+                            <X className="w-4 h-4 shrink-0" />
                             {error}
                         </div>
                     )}
 
-                    <form id="add-resource-form" onSubmit={handleSubmit} className="space-y-6">
+                    <form id="add-resource-form" onSubmit={handleSubmit} className="space-y-5">
+                        {/* Resource Name */}
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Resource Name</label>
+                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                Resource Name <span className="text-red-400">*</span>
+                            </label>
                             <input
                                 required
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
-                                placeholder="E.g., Z9 Hall"
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all font-medium text-slate-900"
+                                placeholder="e.g. Lab 01, Hall A"
+                                className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        {/* Category & Capacity */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Category</label>
+                                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Category <span className="text-red-400">*</span>
+                                </label>
                                 <select
                                     name="category"
                                     value={formData.category}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all font-medium text-slate-900 appearance-none"
+                                    className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                                 >
-                                    <option value="Lecture Halls">Lecture Halls</option>
-                                    <option value="Labs">Labs</option>
-                                    <option value="Equipment">Equipment</option>
-                                    <option value="Vehicles">Vehicles</option>
+                                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                                 </select>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Capacity</label>
+                                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Capacity <span className="text-red-400">*</span>
+                                </label>
                                 <input
                                     required
                                     name="capacity"
+                                    type="number"
+                                    min="1"
                                     value={formData.capacity}
                                     onChange={handleChange}
-                                    placeholder="E.g., 50 seats"
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all font-medium text-slate-900"
+                                    placeholder="e.g. 60"
+                                    className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                                 />
                             </div>
                         </div>
 
+                        {/* Location */}
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Location</label>
+                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                Location <span className="text-red-400">*</span>
+                            </label>
                             <input
                                 required
                                 name="location"
                                 value={formData.location}
                                 onChange={handleChange}
-                                placeholder="E.g., Block A"
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all font-medium text-slate-900"
+                                placeholder="e.g. Block A, Floor 2"
+                                className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             />
                         </div>
-                        
+
+                        {/* Equipment */}
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Status</label>
+                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">
+                                Equipment / Amenities
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {EQUIPMENT_OPTIONS.map(item => (
+                                    <button
+                                        key={item}
+                                        type="button"
+                                        onClick={() => toggleEquipment(item)}
+                                        className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                                            formData.equipment.includes(item)
+                                                ? 'bg-[#1E3A8A] text-white border-[#1E3A8A] shadow-sm'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-400 hover:text-[#1E3A8A]'
+                                        }`}
+                                    >
+                                        {item}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                                Status
+                            </label>
                             <select
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all font-medium text-slate-900 appearance-none"
+                                className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                             >
-                                <option value="Available">Available</option>
-                                <option value="Booked">Booked</option>
-                                <option value="Maintenance">Maintenance</option>
+                                {STATUSES.map(s => <option key={s}>{s}</option>)}
                             </select>
                         </div>
                     </form>
                 </div>
 
-                <div className="p-8 pb-8 pt-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3 mt-auto">
+                {/* Footer */}
+                <div className="px-7 py-5 border-t border-slate-100 bg-slate-50/60 flex justify-end gap-3">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-6 py-3 rounded-full text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+                        className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-100 transition-colors"
                     >
                         Cancel
                     </button>
@@ -158,13 +219,12 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
                         type="submit"
                         form="add-resource-form"
                         disabled={loading}
-                        className="px-8 py-3 rounded-full bg-brand-primary text-white font-bold tracking-wide hover:bg-brand-primary-light active:scale-95 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+                        className="px-6 py-2.5 rounded-xl bg-[#1E3A8A] hover:bg-[#1e40af] text-white text-sm font-semibold flex items-center gap-2 transition-colors shadow-md shadow-blue-900/20 disabled:opacity-60 active:scale-95"
                     >
-                        {loading ? 'Saving...' : (
-                            <>
-                                <Check className="w-5 h-5" />
-                                Save Resource
-                            </>
+                        {loading ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                        ) : (
+                            <><Check className="w-4 h-4" /> Save Resource</>
                         )}
                     </button>
                 </div>

@@ -22,7 +22,7 @@ import {
     Package,
 } from "lucide-react";
 
-type SortField = "name" | "category" | "capacity" | "status";
+type SortField = "name" | "type" | "capacity" | "availability_status";
 type SortDir = "asc" | "desc";
 
 export default function ResourcesPage() {
@@ -72,7 +72,10 @@ export default function ResourcesPage() {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!res.ok) throw new Error("Failed to delete resource");
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || "Failed to delete resource");
+            }
             fetchResources();
         } catch (err: any) {
             alert(err.message);
@@ -113,10 +116,10 @@ export default function ResourcesPage() {
             const q = searchQuery.toLowerCase();
             const matchSearch =
                 r.name.toLowerCase().includes(q) ||
-                r.category.toLowerCase().includes(q) ||
+                r.type.toLowerCase().includes(q) ||
                 r.location?.toLowerCase().includes(q);
-            const matchCat = selectedCategory === "All" || r.category === selectedCategory;
-            const matchStatus = selectedStatus === "All" || r.status === selectedStatus;
+            const matchCat = selectedCategory === "All" || r.type === selectedCategory;
+            const matchStatus = selectedStatus === "All" || r.availability_status === selectedStatus;
             return matchSearch && matchCat && matchStatus;
         })
         .sort((a, b) => {
@@ -126,8 +129,8 @@ export default function ResourcesPage() {
         });
 
     const totalResources = resources.length;
-    const available = resources.filter((r) => r.status === "Available").length;
-    const booked = resources.filter((r) => r.status === "Booked").length;
+    const available = resources.filter((r) => r.availability_status === "Available").length;
+    const booked = resources.filter((r) => r.availability_status === "Booked").length;
 
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />;
@@ -268,9 +271,9 @@ export default function ResourcesPage() {
                                             {(
                                                 [
                                                     { label: "Name", field: "name" },
-                                                    { label: "Type", field: "category" },
+                                                    { label: "Type", field: "type" },
                                                     { label: "Capacity", field: "capacity" },
-                                                    { label: "Status", field: "status" },
+                                                    { label: "Status", field: "availability_status" },
                                                 ] as { label: string; field: SortField }[]
                                             ).map(({ label, field }) => (
                                                 <th
@@ -307,9 +310,9 @@ export default function ResourcesPage() {
 
                                                 {/* Category */}
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${getCategoryColor(resource.category)}`}>
-                                                        {getCategoryIcon(resource.category)}
-                                                        {resource.category}
+                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${getCategoryColor(resource.type)}`}>
+                                                        {getCategoryIcon(resource.type)}
+                                                        {resource.type}
                                                     </span>
                                                 </td>
 
@@ -322,23 +325,23 @@ export default function ResourcesPage() {
                                                 <td className="px-6 py-4">
                                                     <span
                                                         className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${
-                                                            resource.status === "Available"
+                                                            resource.availability_status === "Available"
                                                                 ? "bg-emerald-100 text-emerald-700"
-                                                                : resource.status === "Booked"
+                                                                : resource.availability_status === "Booked"
                                                                 ? "bg-red-100 text-red-600"
                                                                 : "bg-amber-100 text-amber-700"
                                                         }`}
                                                     >
                                                         <span
                                                             className={`w-1.5 h-1.5 rounded-full ${
-                                                                resource.status === "Available"
+                                                                resource.availability_status === "Available"
                                                                     ? "bg-emerald-500"
-                                                                    : resource.status === "Booked"
+                                                                    : resource.availability_status === "Booked"
                                                                     ? "bg-red-500"
                                                                     : "bg-amber-500"
                                                             }`}
                                                         />
-                                                        {resource.status}
+                                                        {resource.availability_status}
                                                     </span>
                                                 </td>
 

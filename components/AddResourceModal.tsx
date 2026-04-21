@@ -20,11 +20,11 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
-        category: 'Lecture Halls',
+        type: 'Lecture Halls',
         capacity: '',
         location: '',
         equipment: [] as string[],
-        status: 'Available',
+        availability_status: 'Available',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
             onSuccess();
             onClose();
             // reset
-            setFormData({ name: '', category: 'Lecture Halls', capacity: '', location: '', equipment: [], status: 'Available' });
+            setFormData({ name: '', type: 'Lecture Halls', capacity: '', location: '', equipment: [], availability_status: 'Available' });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -123,11 +123,11 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                                    Category <span className="text-red-400">*</span>
+                                    Type <span className="text-red-400">*</span>
                                 </label>
                                 <select
-                                    name="category"
-                                    value={formData.category}
+                                    name="type"
+                                    value={formData.type}
                                     onChange={handleChange}
                                     className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                                 >
@@ -195,8 +195,8 @@ export default function AddResourceModal({ isOpen, onClose, onSuccess }: AddReso
                                 Status
                             </label>
                             <select
-                                name="status"
-                                value={formData.status}
+                                name="availability_status"
+                                value={formData.availability_status}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2.5 border border-slate-200 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
                             >

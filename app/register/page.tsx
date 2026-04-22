@@ -64,11 +64,27 @@ export default function RegisterPage() {
             if (fullName.trim()) {
                 await updateProfile(userCredential.user, { displayName: fullName.trim() });
             }
-            await sendEmailVerification(userCredential.user);
-            setSuccess("Verification email sent. Please check your inbox before signing in.");
+            // await sendEmailVerification(userCredential.user);
+            setSuccess("Account created! Redirecting to sign in…");
+            setTimeout(() => router.push("/login"), 1500);
         } catch (err: unknown) {
-            setError("Registration failed. Please try again.");
-            console.error(err);
+            if (err instanceof Error) {
+                const code = (err as { code?: string }).code ?? "";
+                if (code.includes("email-already-in-use")) {
+                    setError("An account with this email already exists. Please sign in instead.");
+                } else if (code.includes("weak-password")) {
+                    setError("Password is too weak. Use at least 8 characters.");
+                } else if (code.includes("invalid-email")) {
+                    setError("The email address is not valid.");
+                } else if (code.includes("network-request-failed")) {
+                    setError("Network error. Check your connection and try again.");
+                } else {
+                    setError("Registration failed. Please try again.");
+                }
+                console.error(err);
+            } else {
+                setError("An unexpected error occurred.");
+            }
         } finally {
             setLoading(false);
         }

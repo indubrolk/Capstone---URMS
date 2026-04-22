@@ -4,16 +4,25 @@ async function seed() {
   try {
     console.log("Seeding data...");
 
+    // Disable foreign key checks to truncate tables
+    await db.query('SET FOREIGN_KEY_CHECKS = 0');
+    await db.query('TRUNCATE TABLE bookings');
+    await db.query('TRUNCATE TABLE maintenance_tickets');
+    await db.query('TRUNCATE TABLE resources');
+    await db.query('SET FOREIGN_KEY_CHECKS = 1');
+
     // Insert Resources
     await db.query(`
       INSERT INTO resources (name, type, capacity, location, availability_status, equipment)
       VALUES 
-        ('Lecture Hall 01', 'Lecture Halls', '150', 'Block B', 'Available', 'Projector, Whiteboard, AC'),
-        ('Physics Lab', 'Laboratories', '40', 'Science Block', 'In Use', 'Oscilloscopes, Multimeters'),
-        ('Mini Auditorium', 'Auditoriums', '200', 'Main Building', 'Available', 'Sound System, Projector, Stage'),
-        ('Meeting Room A', 'Meeting Rooms', '20', 'Admin Block', 'Under Maintenance', 'Conference Phone, Display Screen'),
-        ('Chemistry Lab', 'Laboratories', '50', 'Science Block', 'Available', 'Fume Hoods, Microscopes'),
-        ('Computer Lab 01', 'Computer Labs', '60', 'IT Center', 'Available', '60 PCs, Projector, High-Speed Internet')
+        ('Lecture Hall 01', 'Lecture Halls', '150', 'Block B', 'Available', '["Projector", "Whiteboard", "AC"]'),
+        ('Physics Lab', 'Labs', '40', 'Science Block', 'Available', '["Oscilloscopes", "Multimeters"]'),
+        ('Mini Auditorium', 'Lecture Halls', '200', 'Main Building', 'Available', '["Sound System", "Projector", "Stage"]'),
+        ('Meeting Room A', 'Rooms', '20', 'Admin Block', 'Available', '["Conference Phone", "Display Screen"]'),
+        ('Chemistry Lab', 'Labs', '50', 'Science Block', 'Available', '["Fume Hoods", "Microscopes"]'),
+        ('Computer Lab 01', 'Labs', '60', 'IT Center', 'Available', '["60 PCs", "Projector", "High-Speed Internet"]'),
+        ('Faculty Van', 'Vehicles', '14', 'Transport Pool', 'Available', '["GPS", "AC"]'),
+        ('Projector X1', 'Equipment', '1', 'IT Desk', 'Available', '[]')
     `);
 
     console.log("Resources seeded.");
@@ -23,8 +32,9 @@ async function seed() {
     if (resources && resources.length > 0) {
       const lh1 = resources.find((r: any) => r.name === 'Lecture Hall 01')?.id;
       const physicsLab = resources.find((r: any) => r.name === 'Physics Lab')?.id;
+      const meetingRoom = resources.find((r: any) => r.name === 'Meeting Room A')?.id;
 
-      if (lh1 && physicsLab) {
+      if (lh1 && physicsLab && meetingRoom) {
         // Insert some past and future bookings
         const today = new Date();
         const tomorrow = new Date(today);
@@ -46,6 +56,16 @@ async function seed() {
           lh1, fDate(tomorrow), fDate(new Date(tomorrow.getTime() + 1 * 60 * 60 * 1000))
         ]);
         console.log("Bookings seeded.");
+
+        // Insert Maintenance Tickets
+        await db.query(`
+          INSERT INTO maintenance_tickets (resourceId, title, description, priority, status, createdBy, assignedTo)
+          VALUES 
+            (?, 'AC Maintenance', 'Blowing warm air', 'Medium', 'IN_PROGRESS', 'staff-1', 'tech-1'),
+            (?, 'Projector Flickering', 'Image drops out randomly', 'High', 'OPEN', 'lecturer-2', NULL),
+            (?, 'Chair Repairs', 'Multiple broken chairs in back row', 'Low', 'OPEN', 'student-3', NULL)
+        `, [lh1, physicsLab, meetingRoom]);
+        console.log("Maintenance tickets seeded.");
       }
     }
 

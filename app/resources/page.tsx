@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AddResourceModal from "@/components/AddResourceModal";
 import EditResourceModal, { Resource } from "@/components/EditResourceModal";
+import BulkImport from "@/components/BulkImport";
 import { useAuth } from "@/lib/auth-context";
 import {
     Search,
@@ -20,6 +21,7 @@ import {
     Building2,
     DoorOpen,
     Package,
+    UploadCloud,
 } from "lucide-react";
 
 type SortField = "name" | "type" | "capacity" | "availability_status";
@@ -37,6 +39,7 @@ export default function ResourcesPage() {
     const [sortDir, setSortDir] = useState<SortDir>("asc");
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
     const [editingResource, setEditingResource] = useState<Resource | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -152,14 +155,23 @@ export default function ResourcesPage() {
                             <p className="text-slate-500 mt-1 text-sm">Manage university resources, labs, and halls</p>
                         </div>
                         {isAdmin && (
-                            <button
-                                id="add-resource-btn"
-                                onClick={() => setIsAddModalOpen(true)}
-                                className="inline-flex items-center gap-2 bg-[#1E3A8A] hover:bg-[#1e40af] active:scale-95 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-blue-900/20 transition-all duration-200"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Resource
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsBulkImportOpen(true)}
+                                    className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm transition-all duration-200"
+                                >
+                                    <UploadCloud className="w-4 h-4" />
+                                    Bulk Import
+                                </button>
+                                <button
+                                    id="add-resource-btn"
+                                    onClick={() => setIsAddModalOpen(true)}
+                                    className="inline-flex items-center gap-2 bg-[#1E3A8A] hover:bg-[#1e40af] active:scale-95 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-blue-900/20 transition-all duration-200"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Resource
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -395,6 +407,11 @@ export default function ResourcesPage() {
                 isOpen={!!editingResource}
                 resource={editingResource}
                 onClose={() => setEditingResource(null)}
+                onSuccess={fetchResources}
+            />
+            <BulkImport
+                isOpen={isBulkImportOpen}
+                onClose={() => setIsBulkImportOpen(false)}
                 onSuccess={fetchResources}
             />
         </ProtectedRoute>

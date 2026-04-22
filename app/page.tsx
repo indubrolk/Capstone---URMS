@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import {
+  Landmark,
   ArrowRight,
-  LayoutDashboard,
   Calendar,
   ShieldCheck,
   Users,
   Zap,
   TrendingUp,
+  LayoutDashboard
 } from "lucide-react";
 
 export default function LandingPage() {

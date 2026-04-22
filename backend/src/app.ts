@@ -19,11 +19,16 @@ import maintenanceTicketRoutes from "./routes/maintenanceTicketRoutes";
 app.use("/api/resources", resourceRoutes);
 app.use("/api/maintenance-tickets", maintenanceTicketRoutes);
 
+import { checkConnection } from "./config/db.config";
+
 // ✅ Health Check Route
-app.get("/api/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "success",
-    message: "URMS Backend is running",
+app.get("/api/health", async (req: Request, res: Response) => {
+  const isDbConnected = await checkConnection();
+  res.status(isDbConnected ? 200 : 503).json({
+    status: isDbConnected ? "success" : "degraded",
+    message: isDbConnected ? "URMS Backend is fully operational" : "URMS Backend is running but Database is unavailable",
+    database: isDbConnected ? "connected" : "disconnected",
+    timestamp: new Date().toISOString()
   });
 });
 

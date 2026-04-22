@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS resources (
   capacity VARCHAR(100) NOT NULL DEFAULT '0',
   location VARCHAR(255) NOT NULL,
   availability_status VARCHAR(50) NOT NULL DEFAULT 'Available',
+  equipment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

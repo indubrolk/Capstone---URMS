@@ -6,9 +6,8 @@ dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
-// Start server
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 
     // Test DB connection on startup and handle failure gracefully
     pool.getConnection((err, connection) => {

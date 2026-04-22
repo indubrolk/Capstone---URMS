@@ -4,10 +4,18 @@ import db from "../db/db";
 // GET all resources
 export const getResources = async (req: Request, res: Response) => {
   const [rows] = await db.query("SELECT * FROM resources");
-  const formattedRows = (rows as any[]).map(row => ({
-    ...row,
-    equipment: row.equipment ? JSON.parse(row.equipment) : []
-  }));
+  const formattedRows = (rows as any[]).map(row => {
+    let eq = [];
+    if (row.equipment) {
+      try {
+        eq = JSON.parse(row.equipment);
+      } catch (e) {
+        // Fallback for equipment stored as comma-separated strings instead of JSON
+        eq = row.equipment.split(',').map((item: string) => item.trim());
+      }
+    }
+    return { ...row, equipment: eq };
+  });
   res.json({ data: formattedRows });
 };
 
@@ -45,4 +53,40 @@ export const deleteResource = async (req: Request, res: Response) => {
   await db.query("DELETE FROM resources WHERE id=?", [id]);
 
   res.json({ message: "Deleted" });
+};
+
+// IMPORT multiple resources (Bulk Import)
+export const importResources = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { resources } = req.body;
+    
+    if (!resources || !Array.isArray(resources) || resources.length === 0) {
+      res.status(400).json({ status: "error", message: "No valid resources array provided" });
+      return;
+    }
+
+    const values = resources.map((r: any) => [
+      r.name,
+      r.type || "Lecture Halls",
+      r.capacity || "0",
+      r.location,
+      r.availability_status || "Available",
+      JSON.stringify(r.equipment || [])
+    ]);
+
+    // Perform a bulk insert
+    await db.query(
+      "INSERT INTO resources (name, type, capacity, location, availability_status, equipment) VALUES ?",
+      [values]
+    );
+
+    res.json({ 
+      status: "success", 
+      message: `${resources.length} resources imported successfully!`,
+      count: resources.length 
+    });
+  } catch (error: any) {
+    console.error("Bulk Import Error:", error);
+    res.status(500).json({ status: "error", message: "Database insert failed" });
+  }
 };

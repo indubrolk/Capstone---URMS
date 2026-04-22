@@ -6,13 +6,17 @@ import {
     getTicketById,
     updateTicket,
     deleteTicket,
-    updateTicketStatus
+    updateTicketStatus,
+    generatePdfReport
 } from '../controllers/maintenanceTicketCtrl';
 
 const router = express.Router();
 
 // Apply auth middleware to all maintenance ticket routes
 router.use(verifyToken);
+
+// Report endpoint (must be before /:id to avoid conflict)
+router.get('/report/pdf', generatePdfReport as any);
 
 // CRUD endpoints
 router.post('/', createTicket as any);

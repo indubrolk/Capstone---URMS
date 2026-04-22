@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { MaintenanceTicketModel } from '../models/maintenanceTicket.model';
+import { generateMaintenanceReportPDF } from '../services/pdfReportService';
 
 // Interface extending Request to include the user injected by auth.middleware
 interface AuthRequest extends Request {
@@ -216,5 +217,45 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
     } catch (error) {
         console.error('Error updating ticket status:', error);
         res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const generatePdfReport = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || !isStaffOrAdmin(req.user)) {
+            res.status(403).json({ message: 'Forbidden: Only administrators or maintenance staff can generate reports' });
+            return;
+        }
+
+        const filters: any = {};
+        
+        if (req.query.status) filters.status = req.query.status;
+        if (req.query.priority) filters.priority = req.query.priority;
+        if (req.query.resourceId) filters.resourceId = req.query.resourceId;
+
+        // RBAC constraint for Staff
+        const isAdmin = req.user.admin === true || req.user.role === 'admin' || req.user.uid === 'dev-user';
+        if (!isAdmin && req.user.role === 'maintenance') {
+            filters.assignedTo = req.user.uid;
+        }
+
+        const tickets = await MaintenanceTicketModel.findAll(filters);
+
+        if (!tickets || tickets.length === 0) {
+            res.status(404).json({ message: 'No data available to generate report' });
+            return;
+        }
+
+        // Set Headers for PDF Download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="maintenance-report.pdf"');
+
+        // Pipe directly to response
+        generateMaintenanceReportPDF(tickets, res, filters);
+        
+        // Note: res is automatically finished when the stream closes inside PDFKit
+    } catch (error) {
+        console.error('Error generating PDF report:', error);
+        res.status(500).json({ message: 'Internal server error during PDF generation' });
     }
 };

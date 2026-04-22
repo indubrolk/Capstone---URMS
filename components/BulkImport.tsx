@@ -62,7 +62,16 @@ export default function BulkImport({ isOpen, onClose, onSuccess }: BulkImportPro
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         
-        const jsonData = XLSX.utils.sheet_to_json<any>(sheet);
+        const rawJsonData = XLSX.utils.sheet_to_json<any>(sheet);
+        
+        // Make keys case-insensitive by converting them tightly to lower case
+        const jsonData = rawJsonData.map(row => {
+          const formattedRow: any = {};
+          Object.keys(row).forEach(key => {
+            formattedRow[key.toString().toLowerCase().trim()] = row[key];
+          });
+          return formattedRow;
+        });
         
         validateData(jsonData);
       } catch (err) {
@@ -78,40 +87,35 @@ export default function BulkImport({ isOpen, onClose, onSuccess }: BulkImportPro
       return;
     }
 
-    const newErrors: string[] = [];
     const validStatuses = ["Available", "Booked", "Maintenance"];
 
     const validatedData = data.map((row, index) => {
-      const rowNum = index + 2; // +1 for 0-index, +1 for header
-      if (!row.name || !row.type || !row.location) {
-        newErrors.push(`Row ${rowNum}: Name, Type, and Location are required fields.`);
-      }
+      // Automatically fill correct data formats instead of halting import
+      const name = row.name ? String(row.name).trim() : `Imported Resource ${index + 1}`;
+      const type = row.type ? String(row.type).trim() : "Rooms";
+      const location = row.location ? String(row.location).trim() : "Main Campus";
       
-      const capacity = parseInt(row.capacity);
+      let capacity = parseInt(row.capacity);
       if (isNaN(capacity)) {
-        newErrors.push(`Row ${rowNum}: Capacity must be a valid number.`);
+        capacity = 0; // Default to 0
       }
 
       let status = row.status || "Available";
       if (!validStatuses.includes(status)) {
-        newErrors.push(`Row ${rowNum}: Status must be Available, Booked, or Maintenance.`);
-        status = "Available"; // Fallback
+        status = "Available"; // Fallback to Available
       }
 
       return {
-        name: row.name,
-        type: row.type,
-        capacity: isNaN(capacity) ? 0 : capacity,
-        location: row.location,
+        name,
+        type,
+        capacity,
+        location,
         availability_status: status,
       };
     });
 
-    if (newErrors.length > 0) {
-      setErrors(newErrors.slice(0, 5)); // show up to 5 errors max so UI doesn't blow up
-    } else {
-      setParsedData(validatedData);
-    }
+    setErrors([]);
+    setParsedData(validatedData);
   };
 
   const handleImport = async () => {

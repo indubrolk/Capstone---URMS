@@ -4,24 +4,22 @@ import path from 'path';
 
 dotenv.config();
 
+let isFirebaseInitialized = false;
+
 try {
-    // Option 1: Initialize using path to service account key file
-    // const serviceAccountPath = path.join(__dirname, '../../serviceAccountKey.json');
-    // const serviceAccount = require(serviceAccountPath);
+    const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+    const serviceAccount = require(serviceAccountPath);
 
-    // Option 2: Initialize using environment variables if deploying on cloud
-    // Or pass credentials manually
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
 
-    // This is a placeholder initialization. You'll need to download your service account JSON 
-    // from Firebase Console and place it appropriately or use ENV variables.
-
-    // admin.initializeApp({
-    //   credential: admin.credential.cert(serviceAccount)
-    // });
-
-    // console.log('Firebase Admin initialized successfully');
+    isFirebaseInitialized = true;
+    console.log('Firebase Admin initialized successfully');
 } catch (error) {
-    console.error('Firebase Admin initialization error', error);
+    console.warn('\x1b[33m%s\x1b[0m', 'WARNING: Firebase Admin initialization failed. Auth will be disabled/bypassable in dev mode.');
+    console.warn('Please place serviceAccountKey.json in backend/src/config/ to enable full authentication.');
 }
 
+export { isFirebaseInitialized };
 export default admin;

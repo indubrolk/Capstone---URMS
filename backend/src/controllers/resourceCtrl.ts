@@ -3,20 +3,25 @@ import db from "../db/db";
 
 // GET all resources
 export const getResources = async (req: Request, res: Response) => {
-  const [rows] = await db.query("SELECT * FROM resources");
-  const formattedRows = (rows as any[]).map(row => {
-    let eq = [];
-    if (row.equipment) {
-      try {
-        eq = JSON.parse(row.equipment);
-      } catch (e) {
-        // Fallback for equipment stored as comma-separated strings instead of JSON
-        eq = row.equipment.split(',').map((item: string) => item.trim());
+  try {
+    const [rows] = await db.query("SELECT * FROM resources");
+    const formattedRows = (rows as any[]).map(row => {
+      let eq = [];
+      if (row.equipment) {
+        try {
+          eq = JSON.parse(row.equipment);
+        } catch (e) {
+          // Fallback for equipment stored as comma-separated strings instead of JSON
+          eq = row.equipment.split(',').map((item: string) => item.trim());
+        }
       }
-    }
-    return { ...row, equipment: eq };
-  });
-  res.json({ data: formattedRows });
+      return { ...row, equipment: eq };
+    });
+    res.json({ data: formattedRows });
+  } catch (error: any) {
+    console.error("Error fetching resources:", error);
+    res.status(500).json({ status: "error", message: error.message });
+  }
 };
 
 // ADD resource

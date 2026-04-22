@@ -5,7 +5,8 @@ import {
     getTickets,
     getTicketById,
     updateTicket,
-    deleteTicket
+    deleteTicket,
+    updateTicketStatus
 } from '../controllers/maintenanceTicketCtrl';
 
 const router = express.Router();
@@ -19,5 +20,8 @@ router.get('/', getTickets as any);
 router.get('/:id', getTicketById as any);
 router.put('/:id', updateTicket as any);
 router.delete('/:id', deleteTicket as any);
+
+// Status Workflow endpoint
+router.put('/:id/status', updateTicketStatus as any);
 
 export default router;

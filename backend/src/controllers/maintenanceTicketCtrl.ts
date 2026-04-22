@@ -161,3 +161,60 @@ export const deleteTicket = async (req: AuthRequest, res: Response): Promise<voi
         res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+export const updateTicketStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || !isStaffOrAdmin(req.user)) {
+            res.status(403).json({ message: 'Forbidden: Only administrators or maintenance staff can update ticket statuses' });
+            return;
+        }
+
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+            res.status(400).json({ message: 'Invalid ticket ID' });
+            return;
+        }
+
+        const { status } = req.body;
+        if (!status || !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
+            res.status(400).json({ message: 'Invalid status provided' });
+            return;
+        }
+
+        const ticket = await MaintenanceTicketModel.findById(id);
+        if (!ticket) {
+            res.status(404).json({ message: 'Maintenance ticket not found' });
+            return;
+        }
+
+        const currentStatus = ticket.status;
+        const isAdmin = req.user.admin === true || req.user.role === 'admin' || req.user.uid === 'dev-user';
+
+        // Check valid transitions
+        let validTransition = false;
+        if (currentStatus === 'OPEN' && status === 'IN_PROGRESS') {
+            validTransition = true;
+        } else if (currentStatus === 'IN_PROGRESS' && status === 'COMPLETED') {
+            validTransition = true;
+        } else if (isAdmin) {
+            // Admin override allows any transition
+            validTransition = true;
+        }
+
+        if (!validTransition) {
+            res.status(400).json({ message: `Invalid status transition from ${currentStatus} to ${status}` });
+            return;
+        }
+
+        const success = await MaintenanceTicketModel.update(id, { status });
+        if (!success) {
+            res.status(500).json({ message: 'Failed to update ticket status' });
+            return;
+        }
+
+        res.status(200).json({ message: 'Maintenance ticket status updated successfully', status });
+    } catch (error) {
+        console.error('Error updating ticket status:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};

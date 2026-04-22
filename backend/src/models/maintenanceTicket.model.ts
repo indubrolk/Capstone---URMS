@@ -7,15 +7,15 @@ export interface MaintenanceTicket {
     title: string;
     description: string;
     priority: 'Low' | 'Medium' | 'High';
-    status: 'Pending' | 'In Progress' | 'Completed';
+    status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
     createdBy: string;
     assignedTo?: string | null;
     created_at?: Date;
 }
 
 const MOCK_TICKETS: MaintenanceTicket[] = [
-    { id: 1, resourceId: 1, title: 'Projector Issue', description: 'Screen flickering', priority: 'High', status: 'Pending', createdBy: 'dev-user' },
-    { id: 2, resourceId: 2, title: 'AC Maintenance', description: 'Blowing warm air', priority: 'Medium', status: 'In Progress', createdBy: 'staff-1', assignedTo: 'tech-1' }
+    { id: 1, resourceId: 1, title: 'Projector Issue', description: 'Screen flickering', priority: 'High', status: 'OPEN', createdBy: 'dev-user' },
+    { id: 2, resourceId: 2, title: 'AC Maintenance', description: 'Blowing warm air', priority: 'Medium', status: 'IN_PROGRESS', createdBy: 'staff-1', assignedTo: 'tech-1' }
 ];
 
 let mockIdCounter = 3;
@@ -76,7 +76,7 @@ export class MaintenanceTicketModel {
         try {
             const [result] = await promisePool.query<ResultSetHeader>(
                 'INSERT INTO maintenance_tickets (resourceId, title, description, priority, status, createdBy) VALUES (?, ?, ?, ?, ?, ?)',
-                [resourceId, title, description, priority || 'Low', 'Pending', createdBy]
+                [resourceId, title, description, priority || 'Low', 'OPEN', createdBy]
             );
             return result.insertId;
         } catch (error) {
@@ -87,7 +87,7 @@ export class MaintenanceTicketModel {
                 title: title!,
                 description: description!,
                 priority: (priority as 'Low'|'Medium'|'High') || 'Low',
-                status: 'Pending',
+                status: 'OPEN',
                 createdBy: createdBy!,
                 created_at: new Date()
             });
@@ -114,7 +114,7 @@ export class MaintenanceTicketModel {
         } catch (error) {
             const ticket = MOCK_TICKETS.find(t => t.id === id);
             if (ticket) {
-                if (data.status !== undefined) ticket.status = data.status as 'Pending'|'In Progress'|'Completed';
+                if (data.status !== undefined) ticket.status = data.status as 'OPEN'|'IN_PROGRESS'|'COMPLETED';
                 if (data.priority !== undefined) ticket.priority = data.priority as 'Low'|'Medium'|'High';
                 if (data.description !== undefined) ticket.description = data.description;
                 if (data.assignedTo !== undefined) ticket.assignedTo = data.assignedTo;

@@ -14,8 +14,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // ✅ Routes
 import resourceRoutes from "./routes/resourceRoutes";
+import maintenanceTicketRoutes from "./routes/maintenanceTicketRoutes";
 
 app.use("/api/resources", resourceRoutes);
+app.use("/api/maintenance-tickets", maintenanceTicketRoutes);
 
 // ✅ Health Check Route
 app.get("/api/health", (req: Request, res: Response) => {

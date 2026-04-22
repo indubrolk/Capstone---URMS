@@ -4,22 +4,25 @@ USE urms_db;
 CREATE TABLE IF NOT EXISTS resources (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  category ENUM('Lecture Halls', 'Labs', 'Equipment', 'Vehicles') NOT NULL,
-  capacity VARCHAR(100) NOT NULL,
+  type VARCHAR(100) NOT NULL DEFAULT 'Lecture Halls',
+  capacity VARCHAR(100) NOT NULL DEFAULT '0',
   location VARCHAR(255) NOT NULL,
-  status ENUM('Available', 'Booked', 'Maintenance') NOT NULL DEFAULT 'Available',
+  availability_status VARCHAR(50) NOT NULL DEFAULT 'Available',
+  equipment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert dummy data
-INSERT INTO resources (name, category, capacity, location, status) VALUES
-('Main Auditorium', 'Lecture Halls', '500 seats', 'Block A', 'Available'),
-('Mini Auditorium', 'Lecture Halls', '250 seats', 'Block B', 'Booked'),
-('Z9 Hall', 'Lecture Halls', '50 seats', 'Block Z', 'Available'),
-('Z8 Hall', 'Lecture Halls', '50 seats', 'Block Z', 'Available'),
-('Computer Lab', 'Labs', '50 PCs', 'IT Building', 'Maintenance'),
-('Multimedia Projectors', 'Equipment', '5 units', 'IT Helpdesk', 'Available'),
-('Microphones', 'Equipment', '5 units', 'IT Helpdesk', 'Available'),
-('Faculty Vehicle - Three-wheel', 'Vehicles', '3 seats', 'Transport Pool', 'Available'),
-('Faculty Vehicle - Van', 'Vehicles', '14 seats', 'Transport Pool', 'Booked'),
-('Faculty Vehicle - Car', 'Vehicles', '4 seats', 'Transport Pool', 'Available');
+CREATE TABLE IF NOT EXISTS bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  resource_id INT NOT NULL,
+  start_time DATETIME NOT NULL,
+  end_time DATETIME NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'Approved',
+  FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+);
+
+-- Insert dummy data (only if table is empty)
+INSERT INTO resources (name, type, capacity, location, availability_status)
+SELECT * FROM (SELECT
+  'Main Auditorium' AS name, 'Lecture Halls' AS type, '500' AS capacity, 'Block A' AS location, 'Available' AS availability_status
+) AS tmp WHERE NOT EXISTS (SELECT 1 FROM resources LIMIT 1);

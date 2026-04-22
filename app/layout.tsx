@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import LayoutShell from "@/components/LayoutShell";
 
 export const metadata: Metadata = {
   title: "UniLink | Campus Resource Hub",
@@ -18,11 +17,7 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="h-full flex flex-col scroll-smooth selection:bg-brand-primary/20">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          <LayoutShell>{children}</LayoutShell>
         </AuthProvider>
       </body>
     </html>

@@ -160,8 +160,8 @@ export default function LoginPage() {
                     </form>
 
                     <p className="mt-10 text-center text-sm font-medium text-slate-500">
-                        Internal Portal. Need access? {" "}
-                        <Link href="#" className="font-bold text-brand-primary hover:underline transition-all">Request Credentials</Link>
+                        Don't have an account? {" "}
+                        <Link href="/register" className="font-bold text-brand-primary hover:underline transition-all">Create Account</Link>
                     </p>
                 </div>
             </div>

@@ -1,13 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import {
-  Landmark,
-  ArrowRight,
-  Calendar,
-  ShieldCheck,
-  Zap,
-  LayoutDashboard
-} from "lucide-react";
+import { ArrowRight, Calendar, ShieldCheck, Zap, LayoutDashboard } from "lucide-react";
 
 export default function LandingPage() {
   const features = [

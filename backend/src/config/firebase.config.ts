@@ -17,8 +17,11 @@ try {
     isFirebaseInitialized = true;
     console.log('Firebase Admin initialized successfully');
 } catch (error) {
-    console.warn('\x1b[33m%s\x1b[0m', 'WARNING: Firebase Admin initialization failed. Auth will be disabled/bypassable in dev mode.');
-    console.warn('Please place serviceAccountKey.json in backend/src/config/ to enable full authentication.');
+    if (process.env.NODE_ENV === 'development') {
+        console.log('\x1b[33m%s\x1b[0m', 'ℹ️  Firebase Admin not initialized. Auth bypass active for DEV mode.');
+    } else {
+        console.error('❌ Firebase Admin initialization failed:', error);
+    }
 }
 
 export { isFirebaseInitialized };

@@ -11,6 +11,8 @@ export interface MaintenanceTicket {
     createdBy: string;
     assignedTo?: string | null;
     created_at?: Date;
+    completed_at?: Date | null;
+    outcome?: 'Fixed' | 'Faulty' | 'Decommissioned' | null;
 }
 
 const MOCK_TICKETS: MaintenanceTicket[] = [
@@ -104,6 +106,8 @@ export class MaintenanceTicketModel {
             if (data.priority !== undefined) { updates.push('priority = ?'); values.push(data.priority); }
             if (data.description !== undefined) { updates.push('description = ?'); values.push(data.description); }
             if (data.assignedTo !== undefined) { updates.push('assignedTo = ?'); values.push(data.assignedTo); }
+            if (data.completed_at !== undefined) { updates.push('completed_at = ?'); values.push(data.completed_at); }
+            if (data.outcome !== undefined) { updates.push('outcome = ?'); values.push(data.outcome); }
 
             if (updates.length === 0) return true;
 
@@ -118,6 +122,8 @@ export class MaintenanceTicketModel {
                 if (data.priority !== undefined) ticket.priority = data.priority as 'Low'|'Medium'|'High';
                 if (data.description !== undefined) ticket.description = data.description;
                 if (data.assignedTo !== undefined) ticket.assignedTo = data.assignedTo;
+                if (data.completed_at !== undefined) ticket.completed_at = data.completed_at;
+                if (data.outcome !== undefined) ticket.outcome = data.outcome as any;
                 return true;
             }
             return false;

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { MaintenanceTicketModel } from '../models/maintenanceTicket.model';
+import { ResourceModel } from '../models/resource.model';
 import { generateMaintenanceReportPDF } from '../services/pdfReportService';
 
 // Interface extending Request to include the user injected by auth.middleware
@@ -76,7 +77,7 @@ export const getTickets = async (req: AuthRequest, res: Response): Promise<void>
 
 export const getTicketById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id as string);
         if (isNaN(id)) {
             res.status(400).json({ message: 'Invalid ticket ID' });
             return;
@@ -109,7 +110,7 @@ export const updateTicket = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id as string);
         if (isNaN(id)) {
             res.status(400).json({ message: 'Invalid ticket ID' });
             return;
@@ -144,7 +145,7 @@ export const deleteTicket = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id as string);
         if (isNaN(id)) {
             res.status(400).json({ message: 'Invalid ticket ID' });
             return;
@@ -170,15 +171,20 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             return;
         }
 
-        const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id as string);
         if (isNaN(id)) {
             res.status(400).json({ message: 'Invalid ticket ID' });
             return;
         }
 
-        const { status } = req.body;
+        const { status, outcome } = req.body;
         if (!status || !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
             res.status(400).json({ message: 'Invalid status provided' });
+            return;
+        }
+
+        if (status === 'COMPLETED' && outcome && !['Fixed', 'Faulty', 'Decommissioned'].includes(outcome)) {
+            res.status(400).json({ message: 'Invalid outcome provided' });
             return;
         }
 
@@ -207,13 +213,38 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             return;
         }
 
-        const success = await MaintenanceTicketModel.update(id, { status });
+        // Prepare update data according to story: store completion timestamp
+        const updateData: any = { status };
+        if (status === 'COMPLETED') {
+            updateData.completed_at = new Date();
+            if (outcome) updateData.outcome = outcome;
+        }
+
+        const success = await MaintenanceTicketModel.update(id, updateData);
         if (!success) {
             res.status(500).json({ message: 'Failed to update ticket status' });
             return;
         }
 
-        res.status(200).json({ message: 'Maintenance ticket status updated successfully', status });
+        // Automatically update the related resource status post-maintenance
+        if (status === 'COMPLETED' && ticket.resourceId) {
+            let resourceStatus = 'Available'; // Default if fixed
+            
+            if (outcome === 'Faulty') {
+                resourceStatus = 'Under Maintenance';
+            } else if (outcome === 'Decommissioned') {
+                resourceStatus = 'Inactive';
+            }
+            // If fixed (default), status = "Available"
+            
+            await ResourceModel.update(Number(ticket.resourceId), { availability_status: resourceStatus });
+        }
+
+        res.status(200).json({ 
+            message: 'Maintenance ticket status updated successfully', 
+            status,
+            resourceUpdated: status === 'COMPLETED' 
+        });
     } catch (error) {
         console.error('Error updating ticket status:', error);
         res.status(500).json({ message: 'Internal server error' });

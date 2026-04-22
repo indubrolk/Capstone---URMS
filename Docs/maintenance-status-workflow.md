@@ -10,7 +10,7 @@ This document specifies the rigorous lifecycle workflow implemented for Maintena
 Maintenance tasks are constrained to the following 3 finite states:
 - **`OPEN`**: The default phase assigned at ticket inception. Denotes a newly created issue that has been acknowledged but not aggressively acted upon.
 - **`IN_PROGRESS`**: Signals that mechanics or IT administrators have commenced work on the problem.
-- **`COMPLETED`**: Final terminal state indicating the maintenance issue has been successfully resolved and no further action is conventionally required.
+- **`COMPLETED`**: Final terminal state indicating the maintenance issue has been resolved. Transitioning to this state triggers an automatic update of the linked Resource's status based on the provided outcome.
 
 ## Status Transition Lifecycle Diagram
 Transitions are strictly contiguous except for defined Admin override capabilities.
@@ -49,9 +49,16 @@ All status updates traverse a purposefully segregated endpoint to encapsulate ru
 **Required Payload:**
 ```json
 {
-  "status": "OPEN" | "IN_PROGRESS" | "COMPLETED"
+  "status": "OPEN" | "IN_PROGRESS" | "COMPLETED",
+  "outcome": "Fixed" | "Faulty" | "Decommissioned" (Only required when status is COMPLETED)
 }
 ```
+
+### Resource Synchronization
+When status is set to `COMPLETED`, the system synchronizes the linked resource:
+- `outcome: "Fixed"` → Resource `availability_status = "Available"`
+- `outcome: "Faulty"` → Resource `availability_status = "Under Maintenance"`
+- `outcome: "Decommissioned"` → Resource `availability_status = "Inactive"`
 
 ### Error Handling & Edge Cases
 The controller safeguards state anomalies with rigid HTTP metrics:

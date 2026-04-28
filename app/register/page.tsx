@@ -3,21 +3,29 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X } from "lucide-react";
+import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X, CheckCircle, BadgeCheck } from "lucide-react";
+import {
+    createUserWithEmailAndPassword,
+    sendEmailVerification,
+    updateProfile,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function RegisterPage() {
     const router = useRouter();
 
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [role, setRole] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const validateForm = () => {
-        if (!fullName || !email || !password || !confirmPassword) {
+        if (!fullName || !email || !role || !password || !confirmPassword) {
             setError("All fields are required.");
             return false;
         }
@@ -44,6 +52,7 @@ export default function RegisterPage() {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccess(null);
 
         if (!validateForm()) {
             return;
@@ -51,14 +60,31 @@ export default function RegisterPage() {
 
         setLoading(true);
         try {
-            // Simulate API call for registration
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log("Registration simulated for:", { fullName, email });
-            // For now, redirect to login after successful UI registration simulation
-            router.push("/login");
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            if (fullName.trim()) {
+                await updateProfile(userCredential.user, { displayName: fullName.trim() });
+            }
+            // await sendEmailVerification(userCredential.user);
+            setSuccess("Account created! Redirecting to sign in…");
+            setTimeout(() => router.push("/login"), 1500);
         } catch (err: unknown) {
-            setError("Registration failed. Please try again.");
-            console.error(err);
+            if (err instanceof Error) {
+                const code = (err as { code?: string }).code ?? "";
+                if (code.includes("email-already-in-use")) {
+                    setError("An account with this email already exists. Please sign in instead.");
+                } else if (code.includes("weak-password")) {
+                    setError("Password is too weak. Use at least 8 characters.");
+                } else if (code.includes("invalid-email")) {
+                    setError("The email address is not valid.");
+                } else if (code.includes("network-request-failed")) {
+                    setError("Network error. Check your connection and try again.");
+                } else {
+                    setError("Registration failed. Please try again.");
+                }
+                console.error(err);
+            } else {
+                setError("An unexpected error occurred.");
+            }
         } finally {
             setLoading(false);
         }
@@ -147,6 +173,36 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-2">
+                            <label htmlFor="role" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                                Select Role
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <BadgeCheck className="h-5 w-5 text-slate-400 transition-colors group-focus-within:text-brand-primary" />
+                                </div>
+                                <select
+                                    id="role"
+                                    required
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    className="block w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all disabled:opacity-50 appearance-none text-slate-900"
+                                    disabled={loading}
+                                >
+                                    <option value="" disabled>Select your role</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Lecturer">Lecturer</option>
+                                    <option value="Student">Student</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
                             <label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-400">
                                 Password
                             </label>
@@ -201,6 +257,14 @@ export default function RegisterPage() {
                                     <X className="w-3" />
                                 </div>
                                 <p className="text-sm font-bold text-red-600 leading-tight">{error}</p>
+                            </div>
+                        )}
+                        {success && (
+                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="p-1 bg-emerald-500 rounded-full text-white">
+                                    <CheckCircle className="w-3" />
+                                </div>
+                                <p className="text-sm font-bold text-emerald-700 leading-tight">{success}</p>
                             </div>
                         )}
 

@@ -10,8 +10,14 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Guard against re-initialization in Next.js hot-reload
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+let app: any;
+let auth: any = null;
 
-export const auth = getAuth(app);
+// Only initialize Firebase if we have valid config to prevent crash
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "your_api_key_here") {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    auth = getAuth(app);
+}
+
+export { auth };
 export default app;

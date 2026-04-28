@@ -8,13 +8,15 @@
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "seed": "ts-node src/db/seed.ts",
-    "db:setup": "ts-node src/db/setup.ts"
+    "db:setup": "ts-node src/db/setupSupabase.ts",
+    "db:check": "ts-node src/db/setupSupabase.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.0",
     "@types/pdfkit": "^0.17.6",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",

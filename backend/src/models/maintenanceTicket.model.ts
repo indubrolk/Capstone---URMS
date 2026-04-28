@@ -1,146 +1,228 @@
-import { promisePool } from '../config/db.config';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+/**
+ * maintenanceTicket.model.ts
+ * ─────────────────────────────────────────────────────────────
+ * Data-access layer for the `maintenance_tickets` table.
+ * Replaces all previous mysql2 / promisePool queries with
+ * Supabase client calls.
+ *
+ * Table schema (Supabase / PostgreSQL):
+ *   id           uuid  PK default gen_random_uuid()
+ *   resource_id  uuid  FK → resources(id) ON DELETE CASCADE
+ *   title        text  NOT NULL
+ *   description  text
+ *   priority     text  check in ('Low','Medium','High')  default 'Low'
+ *   status       text  check in ('OPEN','IN_PROGRESS','COMPLETED') default 'OPEN'
+ *   created_by   text  NOT NULL    (Firebase UID of reporter)
+ *   assigned_to  text              (Firebase UID of technician)
+ *   created_at   timestamptz       default now()
+ *   completed_at timestamptz
+ *   outcome      text  check in ('Fixed','Faulty','Decommissioned')
+ * ─────────────────────────────────────────────────────────────
+ * NOTE: Column names use snake_case in PostgreSQL. The model
+ * maps them to/from the camelCase interface used throughout
+ * the rest of the backend to preserve the existing API contract.
+ * ─────────────────────────────────────────────────────────────
+ */
+import supabase from '../config/supabaseClient';
 
 export interface MaintenanceTicket {
-    id?: number;
-    resourceId: number | string;
+    id?: string;           // uuid (was number)
+    resourceId: string;    // maps to resource_id column
     title: string;
     description: string;
     priority: 'Low' | 'Medium' | 'High';
     status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
-    createdBy: string;
+    createdBy: string;     // maps to created_by column
     assignedTo?: string | null;
     created_at?: Date;
     completed_at?: Date | null;
     outcome?: 'Fixed' | 'Faulty' | 'Decommissioned' | null;
 }
 
+// ─── Fallback mock data ───────────────────────────────────────
 const MOCK_TICKETS: MaintenanceTicket[] = [
-    { id: 1, resourceId: 1, title: 'Projector Issue', description: 'Screen flickering', priority: 'High', status: 'OPEN', createdBy: 'dev-user' },
-    { id: 2, resourceId: 2, title: 'AC Maintenance', description: 'Blowing warm air', priority: 'Medium', status: 'IN_PROGRESS', createdBy: 'staff-1', assignedTo: 'tech-1' }
+    { id: '1', resourceId: '1', title: 'Projector Issue',  description: 'Screen flickering',  priority: 'High',   status: 'OPEN',        createdBy: 'dev-user' },
+    { id: '2', resourceId: '2', title: 'AC Maintenance',   description: 'Blowing warm air',    priority: 'Medium', status: 'IN_PROGRESS', createdBy: 'staff-1', assignedTo: 'tech-1' }
 ];
 
-let mockIdCounter = 3;
+// ─── Column mapping helpers ───────────────────────────────────
+/** Convert a DB row (snake_case) → MaintenanceTicket (camelCase) */
+function fromRow(row: any): MaintenanceTicket {
+    return {
+        id:           row.id,
+        resourceId:   row.resource_id,
+        title:        row.title,
+        description:  row.description,
+        priority:     row.priority,
+        status:       row.status,
+        createdBy:    row.created_by,
+        assignedTo:   row.assigned_to ?? null,
+        created_at:   row.created_at ? new Date(row.created_at) : undefined,
+        completed_at: row.completed_at ? new Date(row.completed_at) : null,
+        outcome:      row.outcome ?? null,
+    };
+}
 
+/** Build a DB payload (snake_case) from a partial MaintenanceTicket */
+function toRow(ticket: Partial<MaintenanceTicket>): Record<string, any> {
+    const row: Record<string, any> = {};
+    if (ticket.resourceId   !== undefined) row.resource_id   = String(ticket.resourceId);
+    if (ticket.title        !== undefined) row.title         = ticket.title;
+    if (ticket.description  !== undefined) row.description   = ticket.description;
+    if (ticket.priority     !== undefined) row.priority      = ticket.priority;
+    if (ticket.status       !== undefined) row.status        = ticket.status;
+    if (ticket.createdBy    !== undefined) row.created_by    = ticket.createdBy;
+    if (ticket.assignedTo   !== undefined) row.assigned_to   = ticket.assignedTo;
+    if (ticket.completed_at !== undefined) row.completed_at  = ticket.completed_at;
+    if (ticket.outcome      !== undefined) row.outcome       = ticket.outcome;
+    return row;
+}
+
+// ─── Model ────────────────────────────────────────────────────
 export class MaintenanceTicketModel {
+
+    // ── findAll ─────────────────────────────────────────────
     static async findAll(filters: any = {}): Promise<MaintenanceTicket[]> {
         try {
-            let query = 'SELECT * FROM maintenance_tickets WHERE 1=1';
-            const params: any[] = [];
-            
-            if (filters.status) {
-                query += ' AND status = ?';
-                params.push(filters.status);
-            }
-            if (filters.priority) {
-                query += ' AND priority = ?';
-                params.push(filters.priority);
-            }
-            if (filters.resourceId) {
-                query += ' AND resourceId = ?';
-                params.push(filters.resourceId);
-            }
-            if (filters.createdBy) {
-                query += ' AND createdBy = ?';
-                params.push(filters.createdBy);
-            }
-            
-            query += ' ORDER BY created_at DESC';
+            let query = supabase.from('maintenance_tickets').select('*');
 
-            const [rows] = await promisePool.query<RowDataPacket[]>(query, params);
-            return rows as MaintenanceTicket[];
-        } catch (error) {
-            console.warn('DB connection failed or table missing, falling back to mock data');
+            if (filters.status)     query = query.eq('status',      filters.status) as any;
+            if (filters.priority)   query = query.eq('priority',    filters.priority) as any;
+            if (filters.resourceId) query = query.eq('resource_id', String(filters.resourceId)) as any;
+            if (filters.createdBy)  query = query.eq('created_by',  filters.createdBy) as any;
+            if (filters.assignedTo) query = query.eq('assigned_to', filters.assignedTo) as any;
+
+            query = query.order('created_at', { ascending: false }) as any;
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.warn('⚠️  Supabase query failed in MaintenanceTicketModel.findAll:', error.message);
+                throw new Error(error.message);
+            }
+
+            return (data as any[]).map(fromRow);
+        } catch (err) {
+            console.warn('⚠️  DB connection failed or table missing, falling back to mock data');
             let results = [...MOCK_TICKETS];
-            if (filters.status) results = results.filter(t => t.status === filters.status);
-            if (filters.priority) results = results.filter(t => t.priority === filters.priority);
+            if (filters.status)     results = results.filter(t => t.status     === filters.status);
+            if (filters.priority)   results = results.filter(t => t.priority   === filters.priority);
             if (filters.resourceId) results = results.filter(t => t.resourceId == filters.resourceId);
-            if (filters.createdBy) results = results.filter(t => t.createdBy === filters.createdBy);
+            if (filters.createdBy)  results = results.filter(t => t.createdBy  === filters.createdBy);
+            if (filters.assignedTo) results = results.filter(t => t.assignedTo === filters.assignedTo);
             return results;
         }
     }
 
-    static async findById(id: number): Promise<MaintenanceTicket | null> {
+    // ── findById ────────────────────────────────────────────
+    static async findById(id: string | number): Promise<MaintenanceTicket | null> {
         try {
-            const [rows] = await promisePool.query<RowDataPacket[]>(
-                'SELECT * FROM maintenance_tickets WHERE id = ?',
-                [id]
-            );
-            if (rows.length === 0) return null;
-            return rows[0] as MaintenanceTicket;
-        } catch (error) {
-            return MOCK_TICKETS.find(t => t.id === id) || null;
+            const { data, error } = await supabase
+                .from('maintenance_tickets')
+                .select('*')
+                .eq('id', String(id))
+                .maybeSingle();
+
+            if (error) {
+                console.warn('⚠️  Supabase query failed in MaintenanceTicketModel.findById:', error.message);
+                return MOCK_TICKETS.find(t => t.id === String(id)) || null;
+            }
+
+            if (!data) return null;
+            return fromRow(data);
+        } catch {
+            return MOCK_TICKETS.find(t => t.id === String(id)) || null;
         }
     }
 
-    static async create(ticket: Partial<MaintenanceTicket>): Promise<number> {
-        const { resourceId, title, description, priority, createdBy } = ticket;
+    // ── create ──────────────────────────────────────────────
+    static async create(ticket: Partial<MaintenanceTicket>): Promise<string> {
         try {
-            const [result] = await promisePool.query<ResultSetHeader>(
-                'INSERT INTO maintenance_tickets (resourceId, title, description, priority, status, createdBy) VALUES (?, ?, ?, ?, ?, ?)',
-                [resourceId, title, description, priority || 'Low', 'OPEN', createdBy]
-            );
-            return result.insertId;
-        } catch (error) {
-            const newId = mockIdCounter++;
+            const row = toRow({
+                ...ticket,
+                status:   'OPEN',
+                priority: ticket.priority || 'Low'
+            });
+
+            const { data, error } = await supabase
+                .from('maintenance_tickets')
+                .insert(row)
+                .select('id')
+                .single();
+
+            if (error || !data) {
+                throw new Error(error?.message || 'Insert returned no data');
+            }
+
+            return (data as any).id as string;
+        } catch (err: any) {
+            // Mock fallback
+            console.warn('⚠️  Supabase insert failed, using mock:', err.message);
+            const newId = String(Date.now());
             MOCK_TICKETS.unshift({
-                id: newId,
-                resourceId: resourceId!,
-                title: title!,
-                description: description!,
-                priority: (priority as 'Low'|'Medium'|'High') || 'Low',
-                status: 'OPEN',
-                createdBy: createdBy!,
-                created_at: new Date()
+                id:          newId,
+                resourceId:  String(ticket.resourceId!),
+                title:       ticket.title!,
+                description: ticket.description!,
+                priority:    (ticket.priority as 'Low' | 'Medium' | 'High') || 'Low',
+                status:      'OPEN',
+                createdBy:   ticket.createdBy!,
+                created_at:  new Date()
             });
             return newId;
         }
     }
 
-    static async update(id: number, data: Partial<MaintenanceTicket>): Promise<boolean> {
+    // ── update ──────────────────────────────────────────────
+    static async update(id: string | number, data: Partial<MaintenanceTicket>): Promise<boolean> {
         try {
-            const updates: string[] = [];
-            const values: any[] = [];
+            const row = toRow(data);
+            if (Object.keys(row).length === 0) return true;
 
-            if (data.status !== undefined) { updates.push('status = ?'); values.push(data.status); }
-            if (data.priority !== undefined) { updates.push('priority = ?'); values.push(data.priority); }
-            if (data.description !== undefined) { updates.push('description = ?'); values.push(data.description); }
-            if (data.assignedTo !== undefined) { updates.push('assignedTo = ?'); values.push(data.assignedTo); }
-            if (data.completed_at !== undefined) { updates.push('completed_at = ?'); values.push(data.completed_at); }
-            if (data.outcome !== undefined) { updates.push('outcome = ?'); values.push(data.outcome); }
+            const { error } = await supabase
+                .from('maintenance_tickets')
+                .update(row)
+                .eq('id', String(id));
 
-            if (updates.length === 0) return true;
+            if (error) {
+                console.warn('⚠️  Supabase update failed:', error.message);
+                throw new Error(error.message);
+            }
 
-            values.push(id);
-            const query = `UPDATE maintenance_tickets SET ${updates.join(', ')} WHERE id = ?`;
-            const [result] = await promisePool.query<ResultSetHeader>(query, values);
-            return result.affectedRows > 0;
-        } catch (error) {
-            const ticket = MOCK_TICKETS.find(t => t.id === id);
+            return true;
+        } catch {
+            // Mock fallback
+            const ticket = MOCK_TICKETS.find(t => t.id === String(id));
             if (ticket) {
-                if (data.status !== undefined) ticket.status = data.status as 'OPEN'|'IN_PROGRESS'|'COMPLETED';
-                if (data.priority !== undefined) ticket.priority = data.priority as 'Low'|'Medium'|'High';
-                if (data.description !== undefined) ticket.description = data.description;
-                if (data.assignedTo !== undefined) ticket.assignedTo = data.assignedTo;
+                if (data.status       !== undefined) ticket.status       = data.status as any;
+                if (data.priority     !== undefined) ticket.priority     = data.priority as any;
+                if (data.description  !== undefined) ticket.description  = data.description;
+                if (data.assignedTo   !== undefined) ticket.assignedTo   = data.assignedTo;
                 if (data.completed_at !== undefined) ticket.completed_at = data.completed_at;
-                if (data.outcome !== undefined) ticket.outcome = data.outcome as any;
+                if (data.outcome      !== undefined) ticket.outcome      = data.outcome as any;
                 return true;
             }
             return false;
         }
     }
 
-    static async delete(id: number): Promise<boolean> {
+    // ── delete ──────────────────────────────────────────────
+    static async delete(id: string | number): Promise<boolean> {
         try {
-            // Hard delete based on instructions: "soft delete preferred, otherwise hard delete ONLY if existing architecture already uses it".
-            // Since resource module uses hard delete (`DELETE FROM resources...`), I'll adhere to that architecture.
-            const [result] = await promisePool.query<ResultSetHeader>(
-                'DELETE FROM maintenance_tickets WHERE id = ?',
-                [id]
-            );
-            return result.affectedRows > 0;
-        } catch (error) {
-            const index = MOCK_TICKETS.findIndex(t => t.id === id);
+            const { error } = await supabase
+                .from('maintenance_tickets')
+                .delete()
+                .eq('id', String(id));
+
+            if (error) {
+                console.warn('⚠️  Supabase delete failed:', error.message);
+                throw new Error(error.message);
+            }
+
+            return true;
+        } catch {
+            // Mock fallback
+            const index = MOCK_TICKETS.findIndex(t => t.id === String(id));
             if (index !== -1) {
                 MOCK_TICKETS.splice(index, 1);
                 return true;

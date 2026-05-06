@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Landmark, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import GlobalSearch from "./GlobalSearch";
 
 export default function Navbar() {
     const pathname = usePathname();
@@ -33,6 +34,10 @@ export default function Navbar() {
                                 UniLink
                             </span>
                         </Link>
+                    </div>
+
+                    <div className="flex-1 px-4 lg:px-8 flex justify-center items-center">
+                        <GlobalSearch />
                     </div>
 
                     {/* Desktop Links */}

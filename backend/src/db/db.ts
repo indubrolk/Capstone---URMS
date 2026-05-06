@@ -1,14 +1,16 @@
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
+/**
+ * db.ts
+ * ─────────────────────────────────────────────────────────────
+ * Re-exports the Supabase client as the canonical `db` object.
+ * Previously this re-exported the mysql2 promisePool.
+ *
+ * All modules that imported `db` from this path will now use
+ * the Supabase client transparently.
+ * ─────────────────────────────────────────────────────────────
+ */
+import supabase from '../config/supabaseClient';
 
-dotenv.config();
-
-const db = mysql.createPool({
-  host: process.env.DB_HOST || "127.0.0.1",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "urms_db",
-  port: Number(process.env.DB_PORT) || 3306,
-});
-
-export default db;
+// Expose the supabase client as the default db export so any
+// remaining code that did `import db from './db'` continues
+// to compile without modification.
+export default supabase;

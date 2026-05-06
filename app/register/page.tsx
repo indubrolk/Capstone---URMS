@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X, CheckCircle } from "lucide-react";
+import { User, AtSign, Lock, Eye, EyeOff, ArrowRight, X, CheckCircle, BadgeCheck } from "lucide-react";
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
@@ -16,6 +16,7 @@ export default function RegisterPage() {
 
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [role, setRole] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
 
     const validateForm = () => {
-        if (!fullName || !email || !password || !confirmPassword) {
+        if (!fullName || !email || !role || !password || !confirmPassword) {
             setError("All fields are required.");
             return false;
         }
@@ -63,11 +64,27 @@ export default function RegisterPage() {
             if (fullName.trim()) {
                 await updateProfile(userCredential.user, { displayName: fullName.trim() });
             }
-            await sendEmailVerification(userCredential.user);
-            setSuccess("Verification email sent. Please check your inbox before signing in.");
+            // await sendEmailVerification(userCredential.user);
+            setSuccess("Account created! Redirecting to sign in…");
+            setTimeout(() => router.push("/login"), 1500);
         } catch (err: unknown) {
-            setError("Registration failed. Please try again.");
-            console.error(err);
+            if (err instanceof Error) {
+                const code = (err as { code?: string }).code ?? "";
+                if (code.includes("email-already-in-use")) {
+                    setError("An account with this email already exists. Please sign in instead.");
+                } else if (code.includes("weak-password")) {
+                    setError("Password is too weak. Use at least 8 characters.");
+                } else if (code.includes("invalid-email")) {
+                    setError("The email address is not valid.");
+                } else if (code.includes("network-request-failed")) {
+                    setError("Network error. Check your connection and try again.");
+                } else {
+                    setError("Registration failed. Please try again.");
+                }
+                console.error(err);
+            } else {
+                setError("An unexpected error occurred.");
+            }
         } finally {
             setLoading(false);
         }
@@ -152,6 +169,36 @@ export default function RegisterPage() {
                                     className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all disabled:opacity-50"
                                     disabled={loading}
                                 />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label htmlFor="role" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                                Select Role
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <BadgeCheck className="h-5 w-5 text-slate-400 transition-colors group-focus-within:text-brand-primary" />
+                                </div>
+                                <select
+                                    id="role"
+                                    required
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    className="block w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all disabled:opacity-50 appearance-none text-slate-900"
+                                    disabled={loading}
+                                >
+                                    <option value="" disabled>Select your role</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Lecturer">Lecturer</option>
+                                    <option value="Student">Student</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
 

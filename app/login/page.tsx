@@ -108,7 +108,7 @@ export default function LoginPage() {
                                 <label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-400">
                                     Password
                                 </label>
-                                <Link href="#" className="text-xs font-bold text-brand-primary hover:underline">Forgot?</Link>
+                                <Link href="/forgot-password" className="text-xs font-bold text-brand-primary hover:underline">Forgot?</Link>
                             </div>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

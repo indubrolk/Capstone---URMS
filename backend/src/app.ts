@@ -21,9 +21,11 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ Routes
 import resourceRoutes from "./routes/resourceRoutes";
 import maintenanceTicketRoutes from "./routes/maintenanceTicketRoutes";
+import userRoutes from "./routes/userRoutes";
 
 app.use("/api/resources", resourceRoutes);
 app.use("/api/maintenance-tickets", maintenanceTicketRoutes);
+app.use("/api/users", userRoutes);
 
 import { checkSupabaseConnection } from "./config/supabaseClient";
 

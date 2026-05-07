@@ -12,17 +12,44 @@ export default function Navbar() {
     const { user, profile, signOut } = useAuth();
     const [isOpen, setIsOpen] = React.useState(false);
 
-    const navLinks = [
-        { name: "Home", href: "/" },
-        { name: "Dashboard", href: "/dashboard" },
-        { name: "Resources", href: "/resources" },
-        { name: "Bookings", href: "/bookings" },
-    ];
+    let navLinks: { name: string; href: string }[] = [];
 
-    if (profile?.role === "admin" || profile?.role === "maintenance") {
-        navLinks.push({ name: "Maintenance", href: "/maintenance" });
+    switch (profile?.role) {
+        case "admin":
+            navLinks = [
+                { name: "Admin Console", href: "/dashboard" },
+                { name: "Manage Resources", href: "/resources" },
+                { name: "All Bookings", href: "/bookings" },
+                { name: "System Maintenance", href: "/maintenance" },
+            ];
+            break;
+        case "lecturer":
+            navLinks = [
+                { name: "Teacher Portal", href: "/dashboard" },
+                { name: "Faculty Resources", href: "/resources" },
+                { name: "My Bookings", href: "/bookings" },
+            ];
+            break;
+        case "student":
+            navLinks = [
+                { name: "Student Hub", href: "/dashboard" },
+                { name: "Browse Resources", href: "/resources" },
+                { name: "My Bookings", href: "/bookings" },
+            ];
+            break;
+        case "maintenance":
+            navLinks = [
+                { name: "Operations Hub", href: "/dashboard" },
+                { name: "Active Tickets", href: "/maintenance" },
+            ];
+            break;
+        default:
+            navLinks = [
+                { name: "Home", href: "/" },
+                { name: "Resources", href: "/resources" },
+            ];
+            break;
     }
-
     return (
         <nav className="sticky top-0 z-50 w-full glass">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

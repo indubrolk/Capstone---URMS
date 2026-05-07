@@ -9,7 +9,7 @@ import GlobalSearch from "./GlobalSearch";
 
 export default function Navbar() {
     const pathname = usePathname();
-    const { user, signOut } = useAuth();
+    const { user, profile, signOut } = useAuth();
     const [isOpen, setIsOpen] = React.useState(false);
 
     const navLinks = [
@@ -18,6 +18,10 @@ export default function Navbar() {
         { name: "Resources", href: "/resources" },
         { name: "Bookings", href: "/bookings" },
     ];
+
+    if (profile?.role === "admin" || profile?.role === "maintenance") {
+        navLinks.push({ name: "Maintenance", href: "/maintenance" });
+    }
 
     return (
         <nav className="sticky top-0 z-50 w-full glass">

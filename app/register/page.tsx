@@ -10,6 +10,7 @@ import {
     updateProfile,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { createUserProfile } from "@/lib/supabase";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -61,10 +62,20 @@ export default function RegisterPage() {
         setLoading(true);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+
             if (fullName.trim()) {
                 await updateProfile(userCredential.user, { displayName: fullName.trim() });
             }
-            // await sendEmailVerification(userCredential.user);
+
+            // Save role to Supabase
+            await createUserProfile({
+                id: uid,
+                name: fullName.trim(),
+                email: email.toLowerCase(),
+                role: role.toLowerCase() as any
+            });
+
             setSuccess("Account created! Redirecting to sign in…");
             setTimeout(() => router.push("/login"), 1500);
         } catch (err: unknown) {

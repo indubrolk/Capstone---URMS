@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import NewBookingModal from "@/components/NewBookingModal";
 import {
     Plus,
     Search,
@@ -13,6 +14,8 @@ import {
 } from "lucide-react";
 
 export default function BookingsPage() {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const bookings = [
         { title: "Advanced Robotics Lab", faculty: "Engineering", date: "Mar 12, 2026", time: "09:00 - 12:00", status: "Confirmed" },
         { title: "Organic Chemistry Lab", faculty: "Science", date: "Mar 13, 2026", time: "14:00 - 17:00", status: "Pending" },
@@ -28,7 +31,10 @@ export default function BookingsPage() {
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Resource Bookings</h1>
                         <p className="text-slate-500 font-medium">Manage and monitor facility schedules across all university faculties.</p>
                     </div>
-                    <button className="inline-flex items-center justify-center gap-2 bg-brand-primary text-white font-bold px-6 py-3 rounded-2xl hover:bg-brand-secondary transition-all shadow-lg active:scale-95 whitespace-nowrap">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 bg-brand-primary text-white font-bold px-6 py-3 rounded-2xl hover:bg-brand-secondary transition-all shadow-lg active:scale-95 whitespace-nowrap"
+                    >
                         <Plus className="w-5 h-5" />
                         New Booking
                     </button>
@@ -96,8 +102,8 @@ export default function BookingsPage() {
                                         </td>
                                         <td className="px-6 py-5">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${booking.status === "Confirmed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                                                    booking.status === "Pending" ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                                                        "bg-red-50 text-red-600 border border-red-100"
+                                                booking.status === "Pending" ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                                                    "bg-red-50 text-red-600 border border-red-100"
                                                 }`}>
                                                 {booking.status}
                                             </span>
@@ -121,6 +127,17 @@ export default function BookingsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* New Booking Modal */}
+            <NewBookingModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={() => {
+                    // TODO: Refresh bookings list from Supabase
+                    console.log("Booking created successfully!");
+                }}
+            />
         </ProtectedRoute>
     );
 }
+

@@ -13,6 +13,21 @@ import {
 } from "lucide-react";
 
 // Types
+interface MaintenanceTicket {
+  id: number;
+  resourceId: number;
+  title: string;
+  description: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED';
+  priority: 'High' | 'Medium' | 'Low';
+  createdBy: string;
+  assignedTo?: string;
+  created_at: string;
+  completed_at?: string;
+  outcome?: string;
+}
+
+// Map the DB interface to the UI interface
 interface MaintenanceTask {
   id: string;
   resourceName: string;
@@ -24,74 +39,47 @@ interface MaintenanceTask {
   assignedTo?: string;
 }
 
-// Mock Data
-const mockTasks: MaintenanceTask[] = [
-  {
-    id: "REQ-001",
-    resourceName: "Lab 1 (Computer Eng)",
-    description: "Projector color distortion and flickering.",
-    requestedDate: "2026-04-15",
-    dueDate: "2026-04-18",
-    status: "Pending",
-    priority: "High",
-  },
-  {
-    id: "REQ-002",
-    resourceName: "Lecture Hall A",
-    description: "AC unit 02 blowing warm air.",
-    requestedDate: "2026-04-10",
-    dueDate: "2026-04-12",
-    status: "In Progress",
-    priority: "High",
-    assignedTo: "Tech - HVAC Team"
-  },
-  {
-    id: "REQ-003",
-    resourceName: "Network Server Room",
-    description: "Routine filter replacement.",
-    requestedDate: "2026-04-20",
-    dueDate: "2026-04-25",
-    status: "Pending",
-    priority: "Medium",
-  },
-  {
-    id: "REQ-004",
-    resourceName: "Staff Room",
-    description: "Replace broken chair wheel.",
-    requestedDate: "2026-04-18",
-    dueDate: null,
-    status: "Completed",
-    priority: "Low",
-    assignedTo: "Facilities"
-  },
-  {
-    id: "REQ-005",
-    resourceName: "Auditorium",
-    description: "Microphone static noise during use.",
-    requestedDate: "2026-04-21",
-    dueDate: "2026-04-23",
-    status: "In Progress",
-    priority: "Medium",
-    assignedTo: "Tech - AV Team"
-  },
-  {
-    id: "REQ-006",
-    resourceName: "Library System",
-    description: "Kiosk touchscreen unresponsive.",
-    requestedDate: "2026-04-12",
-    dueDate: "2026-04-14",
-    status: "Pending",
-    priority: "High",
-  }
-];
-
 export default function AdminMaintenanceDashboard() {
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed' | 'Overdue'>('All');
   const [mounted, setMounted] = useState(false);
 
+  const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setMounted(true);
+    fetchTasks();
   }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('http://localhost:5000/api/maintenance-tickets', {
+        headers: {
+            // Include user token if using useAuth here, but skipping for minimal UI since this is just rendering the list
+            'Authorization': `Bearer dev-token`
+        }
+      });
+      if (res.ok) {
+        const data: MaintenanceTicket[] = await res.json();
+        const mapped: MaintenanceTask[] = data.map(ticket => ({
+          id: `REQ-${ticket.id.toString().padStart(3, '0')}`,
+          resourceName: `Resource #${ticket.resourceId}`, // Could fetch resource name if needed, but for minimal UI this is fine
+          description: ticket.description || ticket.title,
+          requestedDate: new Date(ticket.created_at).toISOString().split('T')[0],
+          dueDate: null, // Depending on priority?
+          status: ticket.status === 'OPEN' ? 'Pending' : ticket.status === 'IN_PROGRESS' ? 'In Progress' : 'Completed',
+          priority: ticket.priority,
+          assignedTo: ticket.assignedTo
+        }));
+        setTasks(mapped);
+      }
+    } catch (error) {
+      console.error('Failed to fetch maintenance tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getCurrentDateStr = () => {
     const d = new Date();
@@ -109,11 +97,11 @@ export default function AdminMaintenanceDashboard() {
   };
 
   const tasksWithOverdue = useMemo(() => {
-    return mockTasks.map(task => ({
+    return tasks.map(task => ({
       ...task,
       overdue: isOverdue(task)
     }));
-  }, [todayStr]);
+  }, [todayStr, tasks]);
 
   const filteredTasks = useMemo(() => {
     switch (filter) {
@@ -167,19 +155,51 @@ export default function AdminMaintenanceDashboard() {
               </p>
             </div>
             
-            {stats.overdue > 0 && (
-              <div 
-                className="bg-red-500/10 border border-red-500/20 backdrop-blur-md px-6 py-4 rounded-2xl flex items-center gap-4 animate-in fade-in zoom-in duration-500"
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  const title = prompt('Enter task title:');
+                  if (!title) return;
+                  const desc = prompt('Enter description:');
+                  const resourceId = prompt('Enter resource ID (integer):');
+                  if (!resourceId) return;
+                  
+                  fetch('http://localhost:5000/api/maintenance-tickets', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer dev-token'
+                    },
+                    body: JSON.stringify({
+                      title,
+                      description: desc,
+                      resourceId: parseInt(resourceId),
+                      priority: 'Medium'
+                    })
+                  }).then(res => {
+                    if (res.ok) fetchTasks();
+                    else alert('Failed to create task');
+                  });
+                }}
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-6 py-3 rounded-xl text-white font-bold transition-all border border-white/20 shadow-lg flex items-center justify-center gap-2"
               >
-                <div className="bg-red-500/20 p-3 rounded-full text-red-400 animate-pulse">
-                  <AlertTriangle className="w-8 h-8" />
+                <AlertTriangle className="w-5 h-5" />
+                Create Task
+              </button>
+              {stats.overdue > 0 && (
+                <div 
+                  className="bg-red-500/10 border border-red-500/20 backdrop-blur-md px-6 py-4 rounded-2xl flex items-center gap-4 animate-in fade-in zoom-in duration-500"
+                >
+                  <div className="bg-red-500/20 p-3 rounded-full text-red-400 animate-pulse">
+                    <AlertTriangle className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <div className="text-red-400 font-bold text-sm uppercase tracking-wider">Critical Attention</div>
+                    <div className="text-white font-extrabold text-2xl">{stats.overdue} Tasks Overdue</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-red-400 font-bold text-sm uppercase tracking-wider">Critical Attention</div>
-                  <div className="text-white font-extrabold text-2xl">{stats.overdue} Tasks Overdue</div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

@@ -7,7 +7,7 @@ import { Landmark, AtSign, Lock, Eye, EyeOff, ArrowRight, X } from "lucide-react
 import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
-    const { signIn } = useAuth();
+    const { signIn, setMockUser } = useAuth();
     const router = useRouter();
 
     const [email, setEmail] = useState("");
@@ -108,7 +108,7 @@ export default function LoginPage() {
                                 <label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-400">
                                     Password
                                 </label>
-                                <Link href="#" className="text-xs font-bold text-brand-primary hover:underline">Forgot?</Link>
+                                <Link href="/forgot-password" className="text-xs font-bold text-brand-primary hover:underline">Forgot?</Link>
                             </div>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -163,8 +163,49 @@ export default function LoginPage() {
                         Don't have an account? {" "}
                         <Link href="/register" className="font-bold text-brand-primary hover:underline transition-all">Create Account</Link>
                     </p>
+
+                    {/* Demo Access Panel */}
+                    <div className="mt-12 pt-8 border-t border-slate-100">
+                        <div className="mb-6 text-center">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-1">Demo Quick Access</h3>
+                            <p className="text-xs font-medium text-slate-500 italic">Instant mock login for evaluation</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => {
+                                    const { setMockUser } = useAuth(); // We need to handle this inside the component body
+                                    // Actually, I should use the already destuctured one
+                                }}
+                                className="hidden"
+                            ></button>
+                            <DemoButton role="admin" onClick={() => setMockUser("admin")} />
+                            <DemoButton role="maintenance" onClick={() => setMockUser("maintenance")} />
+                            <DemoButton role="lecturer" onClick={() => setMockUser("lecturer")} />
+                            <DemoButton role="student" onClick={() => setMockUser("student")} />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    );
+}
+
+function DemoButton({ role, onClick }: { role: string, onClick: () => void }) {
+    const router = useRouter();
+    const handleClick = () => {
+        onClick();
+        router.push("/dashboard");
+    };
+
+    return (
+        <button
+            onClick={handleClick}
+            className="flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all group"
+        >
+            <span className="text-xs font-black uppercase tracking-tight text-slate-600 group-hover:text-brand-primary transition-colors">
+                {role}
+            </span>
+            <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-brand-primary group-hover:translate-x-0.5 transition-all" />
+        </button>
     );
 }

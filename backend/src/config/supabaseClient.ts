@@ -27,8 +27,9 @@ dotenv.config({
     override: true
 });
 
-const supabaseUrl     = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl           = process.env.SUPABASE_URL;
+const supabaseAnonKey       = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey    = process.env.SUPABASE_SERVICE_ROLE_KEY; // Admin key to bypass RLS
 
 if (!supabaseUrl || supabaseUrl.includes('your-project-ref')) {
     console.warn(
@@ -37,20 +38,25 @@ if (!supabaseUrl || supabaseUrl.includes('your-project-ref')) {
     );
 }
 
-if (!supabaseAnonKey || supabaseAnonKey.includes('your-supabase-anon-key')) {
+// ── Choose the key to use ────────────────────────────────────
+// If we have a service role key, use it (usually for backend/seeding).
+// Otherwise, fall back to the anon key.
+const activeKey = supabaseServiceKey || supabaseAnonKey;
+
+if (!activeKey || activeKey.includes('your-supabase-anon-key')) {
     console.warn(
         '\x1b[33m%s\x1b[0m',
-        '⚠️  SUPABASE_ANON_KEY is not configured. Edit .env.local and set SUPABASE_ANON_KEY.'
+        '⚠️  No Supabase API key found (Anon or Service). Edit .env.local.'
     );
 }
 
 /**
  * Singleton Supabase client.
- * Uses the anon key — pair with RLS policies for production.
+ * Uses Service Role key if available to bypass RLS (ideal for seeding).
  */
 export const supabase: SupabaseClient = createClient(
-    supabaseUrl  || '',
-    supabaseAnonKey || ''
+    supabaseUrl || '',
+    activeKey   || ''
 );
 
 /**

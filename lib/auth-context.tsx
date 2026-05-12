@@ -89,7 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setProfile(mockProfile);
         // We set a fake user object to pass ProtectedRoute checks
-        setUser({ uid: mockProfile.id, email: mockProfile.email } as User);
+        setUser({ 
+            uid: mockProfile.id, 
+            email: mockProfile.email,
+            getIdToken: async () => "mock-id-token"
+        } as unknown as User);
     };
 
     return (

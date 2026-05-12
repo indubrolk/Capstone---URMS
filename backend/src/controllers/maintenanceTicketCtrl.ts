@@ -1,12 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { MaintenanceTicketModel } from '../models/maintenanceTicket.model';
 import { ResourceModel } from '../models/resource.model';
 import { generateMaintenanceReportPDF } from '../services/pdfReportService';
-
-// Interface extending Request to include the user injected by auth.middleware
-interface AuthRequest extends Request {
-    user?: any;
-}
+import { AuthRequest } from '../middleware/auth.middleware';
 
 // Helper for RBAC
 const isStaffOrAdmin = (user: any) => {
@@ -39,7 +35,7 @@ export const createTicket = async (req: AuthRequest, res: Response): Promise<voi
             description: description || '',
             priority,
             createdBy: req.user.uid
-        });
+        }, req.supabase);
 
         res.status(201).json({
             message: 'Maintenance ticket created successfully',
@@ -67,7 +63,7 @@ export const getTickets = async (req: AuthRequest, res: Response): Promise<void>
             filters.createdBy = req.query.createdBy;
         }
 
-        const tickets = await MaintenanceTicketModel.findAll(filters);
+        const tickets = await MaintenanceTicketModel.findAll(filters, req.supabase);
         res.status(200).json(tickets);
     } catch (error) {
         console.error('Error fetching tickets:', error);
@@ -77,13 +73,9 @@ export const getTickets = async (req: AuthRequest, res: Response): Promise<void>
 
 export const getTicketById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const id = parseInt(req.params.id as string);
-        if (isNaN(id)) {
-            res.status(400).json({ message: 'Invalid ticket ID' });
-            return;
-        }
+        const id = req.params.id as string;
 
-        const ticket = await MaintenanceTicketModel.findById(id);
+        const ticket = await MaintenanceTicketModel.findById(id, req.supabase);
         if (!ticket) {
             res.status(404).json({ message: 'Maintenance ticket not found' });
             return;
@@ -110,12 +102,7 @@ export const updateTicket = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const id = parseInt(req.params.id as string);
-        if (isNaN(id)) {
-            res.status(400).json({ message: 'Invalid ticket ID' });
-            return;
-        }
-
+        const id = req.params.id as string;
         const { status, priority, description, assignedTo } = req.body;
         
         const success = await MaintenanceTicketModel.update(id, {
@@ -123,7 +110,7 @@ export const updateTicket = async (req: AuthRequest, res: Response): Promise<voi
             priority,
             description,
             assignedTo
-        });
+        }, req.supabase);
 
         if (!success) {
             res.status(404).json({ message: 'Maintenance ticket not found' });
@@ -145,13 +132,9 @@ export const deleteTicket = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const id = parseInt(req.params.id as string);
-        if (isNaN(id)) {
-            res.status(400).json({ message: 'Invalid ticket ID' });
-            return;
-        }
+        const id = req.params.id as string;
 
-        const success = await MaintenanceTicketModel.delete(id);
+        const success = await MaintenanceTicketModel.delete(id, req.supabase);
         if (!success) {
             res.status(404).json({ message: 'Maintenance ticket not found' });
             return;
@@ -171,12 +154,7 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             return;
         }
 
-        const id = parseInt(req.params.id as string);
-        if (isNaN(id)) {
-            res.status(400).json({ message: 'Invalid ticket ID' });
-            return;
-        }
-
+        const id = req.params.id as string;
         const { status, outcome } = req.body;
         if (!status || !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
             res.status(400).json({ message: 'Invalid status provided' });
@@ -188,7 +166,7 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             return;
         }
 
-        const ticket = await MaintenanceTicketModel.findById(id);
+        const ticket = await MaintenanceTicketModel.findById(id, req.supabase);
         if (!ticket) {
             res.status(404).json({ message: 'Maintenance ticket not found' });
             return;
@@ -220,7 +198,7 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             if (outcome) updateData.outcome = outcome;
         }
 
-        const success = await MaintenanceTicketModel.update(id, updateData);
+        const success = await MaintenanceTicketModel.update(id, updateData, req.supabase);
         if (!success) {
             res.status(500).json({ message: 'Failed to update ticket status' });
             return;
@@ -237,7 +215,7 @@ export const updateTicketStatus = async (req: AuthRequest, res: Response): Promi
             }
             // If fixed (default), status = "Available"
             
-            await ResourceModel.update(Number(ticket.resourceId), { availability_status: resourceStatus });
+            await ResourceModel.update(ticket.resourceId, { availability_status: resourceStatus }, req.supabase);
         }
 
         res.status(200).json({ 
@@ -270,7 +248,7 @@ export const generatePdfReport = async (req: AuthRequest, res: Response): Promis
             filters.assignedTo = req.user.uid;
         }
 
-        const tickets = await MaintenanceTicketModel.findAll(filters);
+        const tickets = await MaintenanceTicketModel.findAll(filters, req.supabase);
 
         if (!tickets || tickets.length === 0) {
             res.status(404).json({ message: 'No data available to generate report' });

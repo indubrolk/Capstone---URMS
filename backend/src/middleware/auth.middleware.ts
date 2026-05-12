@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import admin, { isFirebaseInitialized } from '../config/firebase.config';
-import { getSupabaseClient } from '../config/supabaseClient';
+import { getSupabaseClient, supabase } from '../config/supabaseClient';
 
 export interface AuthRequest extends Request {
     user?: any;
@@ -13,10 +13,17 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     const finalize = () => {
         // Create scoped supabase client for this request
         if (req.user) {
-            req.supabase = getSupabaseClient({
-                uid: req.user.uid,
-                role: req.user.role || (req.user.admin ? 'admin' : 'student')
-            });
+            const role = req.user.role || (req.user.admin ? 'admin' : 'student');
+            
+            // For admins, use the service role client to bypass RLS for administrative/analytics tasks
+            if (role === 'admin' || req.user.admin) {
+                req.supabase = supabase;
+            } else {
+                req.supabase = getSupabaseClient({
+                    uid: req.user.uid,
+                    role: role
+                });
+            }
         }
         next();
     };

@@ -17,6 +17,11 @@ ALTER TABLE maintenance_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
+CREATE OR REPLACE FUNCTION get_header_debug()
+RETURNS JSON AS $$
+  SELECT current_setting('request.headers', true)::json;
+$$ LANGUAGE sql STABLE;
+
 -- ────────────────────────────────────────────────────────────
 -- 2. Helper Functions: Extract Context from Headers
 -- ────────────────────────────────────────────────────────────
@@ -48,10 +53,11 @@ CREATE POLICY "Users can view own profile"
 ON users FOR SELECT 
 USING (get_urms_uid() = id);
 
--- Admins can view all profiles
-CREATE POLICY "Admins can view all profiles" 
-ON users FOR SELECT 
-USING (get_urms_role() = 'admin');
+-- Admins can manage all profiles
+CREATE POLICY "Admins can manage all profiles" 
+ON users FOR ALL 
+USING (get_urms_role() = 'admin')
+WITH CHECK (get_urms_role() = 'admin');
 
 -- Users can update their own profile
 CREATE POLICY "Users can update own profile" 
@@ -80,6 +86,12 @@ CREATE POLICY "Users can view own bookings"
 ON bookings FOR SELECT 
 USING (get_urms_uid() = user_id OR get_urms_role() = 'admin');
 
+-- Admins can manage all bookings
+CREATE POLICY "Admins can manage all bookings" 
+ON bookings FOR ALL 
+USING (get_urms_role() = 'admin')
+WITH CHECK (get_urms_role() = 'admin');
+
 -- Users can create their own bookings
 CREATE POLICY "Users can create own bookings" 
 ON bookings FOR INSERT 
@@ -106,10 +118,11 @@ CREATE POLICY "Anyone can create tickets"
 ON maintenance_tickets FOR INSERT 
 WITH CHECK (get_urms_uid() = created_by);
 
--- Only staff and admins can update tickets
-CREATE POLICY "Staff can update tickets" 
-ON maintenance_tickets FOR UPDATE 
-USING (get_urms_role() IN ('admin', 'maintenance'));
+-- Admins can manage all tickets
+CREATE POLICY "Admins can manage all tickets" 
+ON maintenance_tickets FOR ALL 
+USING (get_urms_role() = 'admin')
+WITH CHECK (get_urms_role() = 'admin');
 
 -- ────────────────────────────────────────────────────────────
 -- 7. Notifications Policies
@@ -117,12 +130,14 @@ USING (get_urms_role() IN ('admin', 'maintenance'));
 -- Users can view and update their own notifications
 CREATE POLICY "Users can manage own notifications" 
 ON notifications FOR ALL 
-USING (get_urms_uid() = user_id);
+USING (get_urms_uid() = user_id OR get_urms_role() = 'admin')
+WITH CHECK (get_urms_uid() = user_id OR get_urms_role() = 'admin');
 
 -- ────────────────────────────────────────────────────────────
 -- 8. Reports Policies
 -- ────────────────────────────────────────────────────────────
--- Only admins can manage reports
-CREATE POLICY "Admins can manage reports" 
+-- Admins can manage all reports
+CREATE POLICY "Admins can manage all reports" 
 ON reports FOR ALL 
-USING (get_urms_role() = 'admin');
+USING (get_urms_role() = 'admin')
+WITH CHECK (get_urms_role() = 'admin');

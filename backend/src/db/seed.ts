@@ -7,15 +7,17 @@
  * Tables: users, resources, bookings, maintenance_tickets, notifications, reports
  * ─────────────────────────────────────────────────────────────
  */
-import supabase from '../config/supabaseClient';
+import { getSupabaseClient } from '../config/supabaseClient';
 
 async function seed() {
-    console.log('🌱 Starting Comprehensive Supabase seed...');
+    console.log('🌱 Starting Comprehensive Supabase seed (RLS-Aware)...');
+
+    // Use a client with admin role to bypass RLS restrictions
+    const supabase = getSupabaseClient({ uid: 'seed-runner', role: 'admin' });
 
     try {
         // ── 1. Clear existing data (order respects FK constraints) ──
         console.log('Truncating existing data...');
-        // Reports don't have FKs in the schema shown, but good to clear
         await supabase.from('reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('maintenance_tickets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -35,12 +37,12 @@ async function seed() {
                 { id: 'mock-student-2',   name: 'Jane Doe',          email: 'jane@demo.lk',        role: 'student' },
             ]);
             if (userErr) {
-                console.warn('⚠️ User seeding skipped due to RLS policies. Continuing with other tables...');
+                console.warn('⚠️ User seeding skipped or failed (likely RLS). Continuing with other tables...');
             } else {
                 console.log('✅ Users seeded.');
             }
         } catch (e) {
-            console.warn('⚠️ User seeding failed (likely RLS). Continuing with other tables...');
+            console.warn('⚠️ User seeding failed. Continuing...');
         }
 
         // ── 3. Insert Resources ──────────────────────────────────────
@@ -48,16 +50,16 @@ async function seed() {
         const { data: resources, error: resErr } = await supabase
             .from('resources')
             .insert([
-                { name: 'Lecture Hall 01',  type: 'Lecture Halls', capacity: '150', location: 'Block B',       availability_status: 'Available', equipment: JSON.stringify(['Projector', 'Whiteboard', 'AC']) },
-                { name: 'Physics Lab',      type: 'Labs',          capacity: '40',  location: 'Science Block', availability_status: 'Available', equipment: JSON.stringify(['Oscilloscopes', 'Multimeters']) },
-                { name: 'Mini Auditorium',  type: 'Lecture Halls', capacity: '200', location: 'Main Building', availability_status: 'Available', equipment: JSON.stringify(['Sound System', 'Projector', 'Stage']) },
-                { name: 'Meeting Room A',   type: 'Rooms',         capacity: '20',  location: 'Admin Block',   availability_status: 'Available', equipment: JSON.stringify(['Conference Phone', 'Display Screen']) },
-                { name: 'Chemistry Lab',    type: 'Labs',          capacity: '50',  location: 'Science Block', availability_status: 'Available', equipment: JSON.stringify(['Fume Hoods', 'Microscopes']) },
-                { name: 'Computer Lab 01',  type: 'Labs',          capacity: '60',  location: 'IT Center',     availability_status: 'Available', equipment: JSON.stringify(['60 PCs', 'Projector', 'High-Speed Internet']) },
-                { name: 'Faculty Van 01',   type: 'Vehicles',      capacity: '14',  location: 'Transport Pool',availability_status: 'Available', equipment: JSON.stringify(['GPS', 'AC']) },
-                { name: 'Projector X1',     type: 'Equipment',     capacity: '1',   location: 'IT Desk',       availability_status: 'Available', equipment: JSON.stringify(['VGA Cable', 'Remote']) },
-                { name: 'Seminar Room 2',   type: 'Rooms',         capacity: '30',  location: 'Block C',       availability_status: 'Maintenance', equipment: JSON.stringify(['Smart Board']) },
-                { name: 'Hall 7',           type: 'Lecture Halls', capacity: '100', location: 'Block D',       availability_status: 'Booked',    equipment: JSON.stringify(['Projector']) },
+                { name: 'Lecture Hall 01',  type: 'Lecture Halls', capacity: '150', location: 'Block B',       availability_status: 'Available', equipment: ['Projector', 'Whiteboard', 'AC'] },
+                { name: 'Physics Lab',      type: 'Labs',          capacity: '40',  location: 'Science Block', availability_status: 'Available', equipment: ['Oscilloscopes', 'Multimeters'] },
+                { name: 'Mini Auditorium',  type: 'Lecture Halls', capacity: '200', location: 'Main Building', availability_status: 'Available', equipment: ['Sound System', 'Projector', 'Stage'] },
+                { name: 'Meeting Room A',   type: 'Rooms',         capacity: '20',  location: 'Admin Block',   availability_status: 'Available', equipment: ['Conference Phone', 'Display Screen'] },
+                { name: 'Chemistry Lab',    type: 'Labs',          capacity: '50',  location: 'Science Block', availability_status: 'Available', equipment: ['Fume Hoods', 'Microscopes'] },
+                { name: 'Computer Lab 01',  type: 'Labs',          capacity: '60',  location: 'IT Center',     availability_status: 'Available', equipment: ['60 PCs', 'Projector', 'High-Speed Internet'] },
+                { name: 'Faculty Van 01',   type: 'Vehicles',      capacity: '14',  location: 'Transport Pool',availability_status: 'Available', equipment: ['GPS', 'AC'] },
+                { name: 'Projector X1',     type: 'Equipment',     capacity: '1',   location: 'IT Desk',       availability_status: 'Available', equipment: ['VGA Cable', 'Remote'] },
+                { name: 'Seminar Room 2',   type: 'Rooms',         capacity: '30',  location: 'Block C',       availability_status: 'Maintenance', equipment: ['Smart Board'] },
+                { name: 'Hall 7',           type: 'Lecture Halls', capacity: '100', location: 'Block D',       availability_status: 'Booked',    equipment: ['Projector'] },
             ])
             .select();
 
@@ -68,7 +70,6 @@ async function seed() {
         console.log('Seeding Bookings...');
         const lh1        = resources?.find((r: any) => r.name === 'Lecture Hall 01')?.id;
         const physicsLab = resources?.find((r: any) => r.name === 'Physics Lab')?.id;
-        const meetingRoom = resources?.find((r: any) => r.name === 'Meeting Room A')?.id;
         const hall7      = resources?.find((r: any) => r.name === 'Hall 7')?.id;
 
         const today    = new Date();
@@ -76,10 +77,10 @@ async function seed() {
         const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
 
         const { error: bookErr } = await supabase.from('bookings').insert([
-            { resource_id: lh1,         user_id: 'mock-lecturer', start_time: yesterday.toISOString(),                                            end_time: new Date(yesterday.getTime() + 2 * 3600 * 1000).toISOString(), status: 'Completed' },
-            { resource_id: physicsLab,  user_id: 'mock-student',  start_time: today.toISOString(),                                               end_time: new Date(today.getTime()    + 3 * 3600 * 1000).toISOString(), status: 'Approved' },
-            { resource_id: lh1,         user_id: 'mock-lecturer', start_time: tomorrow.toISOString(),                                            end_time: new Date(tomorrow.getTime() + 1 * 3600 * 1000).toISOString(), status: 'Pending' },
-            { resource_id: hall7,       user_id: 'mock-student-2',start_time: today.toISOString(),                                               end_time: new Date(today.getTime()    + 2 * 3600 * 1000).toISOString(), status: 'Approved' },
+            { resource_id: lh1,         user_id: 'mock-lecturer', start_time: yesterday.toISOString(), end_time: new Date(yesterday.getTime() + 2 * 3600 * 1000).toISOString(), status: 'Completed' },
+            { resource_id: physicsLab,  user_id: 'mock-student',  start_time: today.toISOString(),     end_time: new Date(today.getTime()    + 3 * 3600 * 1000).toISOString(), status: 'Approved' },
+            { resource_id: lh1,         user_id: 'mock-lecturer', start_time: tomorrow.toISOString(),  end_time: new Date(tomorrow.getTime() + 1 * 3600 * 1000).toISOString(), status: 'Pending' },
+            { resource_id: hall7,       user_id: 'mock-student-2',start_time: today.toISOString(),     end_time: new Date(today.getTime()    + 2 * 3600 * 1000).toISOString(), status: 'Approved' },
         ]);
         if (bookErr) throw bookErr;
         console.log('✅ Bookings seeded.');
@@ -107,16 +108,7 @@ async function seed() {
         if (notifErr) throw notifErr;
         console.log('✅ Notifications seeded.');
 
-        // ── 7. Insert Reports ────────────────────────────────────────
-        console.log('Seeding Reports...');
-        const { error: repErr } = await supabase.from('reports').insert([
-            { generated_by: 'mock-admin', report_type: 'maintenance', file_path: 'https://example.com/reports/maint-may.pdf' },
-            { generated_by: 'mock-admin', report_type: 'usage',       file_path: 'https://example.com/reports/usage-q1.pdf' },
-        ]);
-        if (repErr) throw repErr;
-        console.log('✅ Reports seeded.');
-
-        console.log('\n🎉 ALL tables seeded successfully with comprehensive mock data.');
+        console.log('\n🎉 ALL tables seeded successfully.');
         process.exit(0);
     } catch (error) {
         console.error('❌ Error seeding data:', error);

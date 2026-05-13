@@ -60,30 +60,37 @@ export default function AnalyticsDashboard() {
     const [googleSheetUrl, setGoogleSheetUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+    const buildParams = (extra: Record<string, string | undefined> = {}) => {
+        const p = new URLSearchParams();
+        if (department) p.set('department', department);
+        if (timeRange === 'custom' && startDate && endDate) {
+            p.set('startDate', startDate);
+            p.set('endDate', endDate);
+        }
+        Object.entries(extra).forEach(([k, v]) => { if (v) p.set(k, v); });
+        return p.toString() ? `?${p.toString()}` : '';
+    };
+
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
-            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
-            const dateParams = timeRange === 'custom' && startDate && endDate 
-                ? `&startDate=${startDate}&endDate=${endDate}` 
-                : "";
+            const qs = buildParams();
 
             const [ovRes, bkRes, rsRes, mtRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/overview?${deptParam.replace('&', '')}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/bookings?${deptParam.replace('&', '')}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/resources?${deptParam.replace('&', '')}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/maintenance?${deptParam.replace('&', '')}${dateParams}`, { headers })
+                fetch(`${API}/api/admin/analytics/overview${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/bookings${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/resources${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/maintenance${qs}`, { headers })
             ]);
 
             if (!ovRes.ok || !bkRes.ok || !rsRes.ok || !mtRes.ok) throw new Error("Failed to fetch analytics data");
 
-            const ov = await ovRes.json();
-            const bk = await bkRes.json();
-            const rs = await rsRes.json();
-            const mt = await mtRes.json();
+            const [ov, bk, rs, mt] = await Promise.all([ovRes.json(), bkRes.json(), rsRes.json(), mtRes.json()]);
 
             setOverview(ov.data);
             setRechartsBookings(bk.data);
@@ -98,26 +105,23 @@ export default function AnalyticsDashboard() {
 
     const fetchBookingReports = async (range: string) => {
         setReportsLoading(true);
+        setError(null);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
-            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
-            const rangeParam = range === 'custom' ? "" : `range=${range}`;
-            const dateParams = range === 'custom' && startDate && endDate 
-                ? `&startDate=${startDate}&endDate=${endDate}` 
-                : "";
+            const rangeQs = range !== 'custom' ? `range=${range}` : '';
+            const qs = buildParams({ ...(rangeQs ? { range } : {}) });
 
             const [trRes, stRes, rfRes, cfRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/booking-trends?${rangeParam}${deptParam}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/booking-status?${deptParam.replace('&', '')}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/resource-bookings?${deptParam.replace('&', '')}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/category-bookings?${deptParam.replace('&', '')}${dateParams}`, { headers })
+                fetch(`${API}/api/admin/analytics/booking-trends${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/booking-status${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/resource-bookings${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/category-bookings${qs}`, { headers })
             ]);
 
-            const tr = await trRes.json();
-            const st = await stRes.json();
-            const rf = await rfRes.json();
-            const cf = await cfRes.json();
+            if (!trRes.ok || !stRes.ok || !rfRes.ok || !cfRes.ok) throw new Error("Failed to fetch booking report data");
+
+            const [tr, st, rf, cf] = await Promise.all([trRes.json(), stRes.json(), rfRes.json(), cfRes.json()]);
 
             setTrends(tr.data);
             setStatusDistribution(st.data);
@@ -125,6 +129,7 @@ export default function AnalyticsDashboard() {
             setCategoryFrequency(cf.data);
         } catch (err: any) {
             console.error("Booking Report Error:", err);
+            setError("Failed to load booking reports: " + err.message);
         } finally {
             setReportsLoading(false);
         }
@@ -132,27 +137,26 @@ export default function AnalyticsDashboard() {
 
     const fetchUtilizationReports = async (range: string) => {
         setReportsLoading(true);
+        setError(null);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
-            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
-            const rangeParam = range === 'custom' ? "" : `range=${range}`;
-            const dateParams = range === 'custom' && startDate && endDate 
-                ? `&startDate=${startDate}&endDate=${endDate}` 
-                : "";
+            const qs = buildParams({ ...(range !== 'custom' ? { range } : {}) });
 
             const [utRes, pkRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/resource-utilization?${rangeParam}${deptParam}${dateParams}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/peak-usage?${deptParam.replace('&', '')}${dateParams}`, { headers })
+                fetch(`${API}/api/admin/analytics/resource-utilization${qs}`, { headers }),
+                fetch(`${API}/api/admin/analytics/peak-usage${qs}`, { headers })
             ]);
 
-            const ut = await utRes.json();
-            const pk = await pkRes.json();
+            if (!utRes.ok || !pkRes.ok) throw new Error("Failed to fetch utilization data");
+
+            const [ut, pk] = await Promise.all([utRes.json(), pkRes.json()]);
 
             setUtilizationData(ut.data);
             setPeakUsage(pk.data);
         } catch (err: any) {
             console.error("Utilization Report Error:", err);
+            setError("Failed to load utilization reports: " + err.message);
         } finally {
             setReportsLoading(false);
         }
@@ -162,13 +166,8 @@ export default function AnalyticsDashboard() {
         setExporting(`${type}-${format}`);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
-            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
-            const rangeParam = timeRange === 'custom' ? "" : `&range=${timeRange}`;
-            const dateParams = timeRange === 'custom' && startDate && endDate 
-                ? `&startDate=${startDate}&endDate=${endDate}` 
-                : "";
-                
-            const response = await fetch(`http://localhost:5000/api/admin/analytics/export/${format}?type=${type}${rangeParam}${deptParam}${dateParams}`, {
+            const qs = buildParams({ type, ...(timeRange !== 'custom' ? { range: timeRange } : {}) });
+            const response = await fetch(`${API}/api/admin/analytics/export/${format}${qs}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -243,7 +242,7 @@ export default function AnalyticsDashboard() {
     const chartJsStatus = {
         labels: statusDistribution ? Object.keys(statusDistribution as any) : [],
         datasets: [{
-            data: statusDistribution ? Object.values(statusDistribution as any) : [],
+            data: (statusDistribution ? Object.values(statusDistribution as any) : []) as number[],
             backgroundColor: COLORS,
             borderWidth: 0,
             hoverOffset: 15
@@ -271,7 +270,7 @@ export default function AnalyticsDashboard() {
     };
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={['admin']}>
             <div className="min-h-screen bg-[#F0F4FF] pb-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     
@@ -459,7 +458,7 @@ export default function AnalyticsDashboard() {
                                         </div>
                                     </div>
                                     <div className="h-[300px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" aspect={2}>
                                             <AreaChart data={rechartsBookings?.trends}>
                                                 <defs>
                                                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -486,7 +485,7 @@ export default function AnalyticsDashboard() {
                                         <PieIcon className="w-5 h-5 text-emerald-500" /> Status Mix
                                     </h3>
                                     <div className="h-[250px] w-full relative">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" aspect={2}>
                                             <RechartsPieChart>
                                                 <Pie
                                                     data={bookingStatusData}
@@ -544,7 +543,7 @@ export default function AnalyticsDashboard() {
                                         <TimeRangePicker value={timeRange} onChange={setTimeRange} mini />
                                     </div>
                                     <div className="h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" aspect={2}>
                                             <BarChart data={resourceCategoryData} layout="vertical">
                                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                                                 <XAxis type="number" hide />
@@ -639,8 +638,11 @@ export default function AnalyticsDashboard() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
+                                                {utilizationData?.length === 0 && (
+                                                    <tr><td colSpan={5} className="py-12 text-center text-slate-400 font-bold">No utilization data for the selected filters.</td></tr>
+                                                )}
                                                 {utilizationData?.map((res: any) => (
-                                                    <tr key={res.id} className="group hover:bg-slate-50 transition-colors">
+                                                    <tr key={res.id ?? res.name} className="group hover:bg-slate-50 transition-colors">
                                                         <td className="py-4 font-bold text-slate-700">{res.name}</td>
                                                         <td className="py-4 text-sm text-slate-500">
                                                             <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">{res.type}</span>

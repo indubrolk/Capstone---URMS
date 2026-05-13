@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "npm run dev:all",
     "dev:backend": "cd backend && npm run dev",
-    "dev:all": "concurrently \"next dev --webpack\" \"npm run dev:backend\"",
+    "dev:all": "concurrently \"next dev\" \"npm run dev:backend\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "scaffold": "echo 'URMS scaffold ready!'",
+    "seed": "cd backend && npm run seed",
+    "db:setup": "cd backend && npm run db:setup",
     "test": "jest",
     "test:watch": "jest --watch"
   },

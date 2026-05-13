@@ -43,11 +43,13 @@ export default function ReportSchedulingPage() {
         }
     }, [user]);
 
+    const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
     const fetchSchedules = async () => {
         setLoading(true);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
-            const res = await fetch("http://localhost:5000/api/admin/reports/schedules", {
+            const res = await fetch(`${API}/api/admin/reports/schedules`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
@@ -65,7 +67,7 @@ export default function ReportSchedulingPage() {
     const handleToggleEnabled = async (schedule: ReportSchedule) => {
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
-            const res = await fetch(`http://localhost:5000/api/admin/reports/schedules/${schedule.id}`, {
+            const res = await fetch(`${API}/api/admin/reports/schedules/${schedule.id}`, {
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -85,7 +87,7 @@ export default function ReportSchedulingPage() {
         if (!confirm("Are you sure you want to delete this schedule?")) return;
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
-            const res = await fetch(`http://localhost:5000/api/admin/reports/schedules/${id}`, {
+            const res = await fetch(`${API}/api/admin/reports/schedules/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -287,8 +289,8 @@ function ScheduleModal({ schedule, onClose, onSuccess, reportTypes, days, userTo
             };
 
             const url = schedule 
-                ? `http://localhost:5000/api/admin/reports/schedules/${schedule.id}`
-                : "http://localhost:5000/api/admin/reports/schedules";
+                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/reports/schedules/${schedule.id}`
+                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/admin/reports/schedules`;
             
             const method = schedule ? 'PATCH' : 'POST';
 

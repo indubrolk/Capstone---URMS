@@ -54,9 +54,9 @@ The Report Export System enables authorized admin users to generate and download
 - **Reusable Aggregation**: Export endpoints reuse the same aggregation logic as the dashboard UI to minimize database load.
 
 ## Future Improvements
-- **Custom Filters**: Allow users to select specific date ranges or categories for export.
 - **Visual Charts**: Integrate Recharts/Chart.js snapshots into the PDF reports.
-- **Scheduled Reports**: Implement cron jobs to email reports to administrators weekly/monthly.
+- **Append Mode for Sheets**: Allow appending data to an existing Google Sheet instead of always creating a new one.
+- **Advanced Excel Formatting**: Apply conditional formatting rules for utilization rate columns.
 
 ## Testing Instructions
 1.  Log in as an Admin.

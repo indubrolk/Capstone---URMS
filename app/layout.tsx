@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body className="h-full flex flex-col scroll-smooth selection:bg-brand-primary/20">
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>

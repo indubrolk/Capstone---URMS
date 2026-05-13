@@ -44,13 +44,13 @@ const checkAndRunSchedules = async () => {
             if (schedule.delivery_day !== currentDay) continue;
 
             // Check if time matches (or is past and hasn't run today)
-            const scheduleTimePrefix = schedule.delivery_time.substring(0, 5);
+            const scheduleTimePrefix = schedule.delivery_time.substring(0, 5); // HH:mm
             
-            // Basic logic: if current hour matches schedule hour, and we haven't run it today
+            // Exact HH:mm match — prevents triggering in the wrong minute of the scheduled hour
             const lastRunDate = schedule.last_run_at ? new Date(schedule.last_run_at).toDateString() : null;
             const today = now.toDateString();
 
-            if (currentTime.startsWith(scheduleTimePrefix.substring(0, 2)) && lastRunDate !== today) {
+            if (currentTime === scheduleTimePrefix && lastRunDate !== today) {
                 console.log(`🚀 Executing scheduled report: ${schedule.id}`);
                 await executeSchedule(schedule);
             }
@@ -129,14 +129,19 @@ const executeSchedule = async (schedule: ReportSchedule) => {
             // Delivery
             if (buffer) {
                 for (const recipientId of schedule.recipients) {
-                    // If recipientId looks like an email, log it as email
-                    if (recipientId.includes('@')) {
-                        logEmailDelivery(recipientId, `Scheduled Report: ${type}`, `Hello, your weekly ${type} report is attached.`, filename);
-                    } else {
-                        // Otherwise it's a userId, send notification
-                        await sendNotification(supabase, recipientId, `Your scheduled ${type} report for ${rangeLabel} has been generated.`, 'info');
+                    try {
+                        if (recipientId.includes('@')) {
+                            // Mock email delivery — replace with nodemailer in production
+                            logEmailDelivery(recipientId, `Scheduled Report: ${type}`, `Hello, your weekly ${type} report is attached.`, filename);
+                        } else {
+                            await sendNotification(supabase, recipientId, `Your scheduled ${type} report for ${rangeLabel} has been generated.`, 'info');
+                        }
+                    } catch (deliveryErr) {
+                        console.error(`Failed to deliver report to ${recipientId}:`, deliveryErr);
                     }
                 }
+            } else {
+                console.warn(`Schedule ${schedule.id}: no buffer generated for type '${type}' — skipping delivery.`);
             }
         }
 

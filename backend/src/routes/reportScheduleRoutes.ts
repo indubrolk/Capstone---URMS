@@ -5,13 +5,13 @@ import {
     updateSchedule, 
     deleteSchedule 
 } from "../controllers/reportScheduleCtrl";
-import { authMiddleware, adminOnly } from "../middleware/auth.middleware";
+import { verifyToken, requireAdmin } from "../middleware/auth.middleware";
 
 const router = Router();
 
 // All scheduling routes are protected and admin-only
-router.use(authMiddleware);
-router.use(adminOnly);
+router.use(verifyToken);
+router.use(requireAdmin);
 
 router.get("/schedules", getSchedules);
 router.post("/schedules", createSchedule);

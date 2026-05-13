@@ -39,8 +39,8 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
 
     const token = header.split(' ')[1];
 
-    // Allow dev-token bypass in development
-    if (token === 'dev-token') {
+    // Allow dev-token bypass in development ONLY — never in production
+    if (token === 'dev-token' && process.env.NODE_ENV !== 'production') {
         req.user = { uid: 'dev-user', role: 'admin', admin: true };
         return finalize();
     }

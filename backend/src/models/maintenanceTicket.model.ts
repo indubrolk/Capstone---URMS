@@ -43,7 +43,8 @@ export interface MaintenanceTicket {
 // ─── Fallback mock data ───────────────────────────────────────
 const MOCK_TICKETS: MaintenanceTicket[] = [
     { id: '1', resourceId: '1', title: 'Projector Issue',  description: 'Screen flickering',  priority: 'High',   status: 'OPEN',        createdBy: 'dev-user' },
-    { id: '2', resourceId: '2', title: 'AC Maintenance',   description: 'Blowing warm air',    priority: 'Medium', status: 'IN_PROGRESS', createdBy: 'staff-1', assignedTo: 'tech-1' }
+    { id: '2', resourceId: '2', title: 'AC Maintenance',   description: 'Blowing warm air',    priority: 'Medium', status: 'IN_PROGRESS', createdBy: 'staff-1', assignedTo: 'tech-1' },
+    { id: '3', resourceId: '3', title: 'Bulb Replacement', description: 'Burnt out after power surge', priority: 'Low', status: 'COMPLETED', createdBy: 'admin', assignedTo: 'tech-1', completed_at: new Date(), outcome: 'Fixed' }
 ];
 
 // ─── Column mapping helpers ───────────────────────────────────
@@ -172,7 +173,9 @@ export class MaintenanceTicketModel {
                     priority:    (ticket.priority as 'Low' | 'Medium' | 'High') || 'Low',
                     status:      'OPEN',
                     createdBy:   ticket.createdBy!,
-                    created_at:  new Date()
+                    created_at:  new Date(),
+                    completed_at: null,
+                    outcome:      null
                 });
                 return newId;
             }

@@ -8,10 +8,11 @@
  *   id                  uuid  PK default gen_random_uuid()
  *   name                text  NOT NULL
  *   type                text  NOT NULL  default 'Lecture Halls'
- *   capacity            text  NOT NULL  default '0'
- *   location            text  NOT NULL
- *   availability_status text  NOT NULL  default 'Available'
- *   equipment           text            (stored as JSON string)
+ *   capacity            integer NOT NULL  default 0
+ *   location            text    NOT NULL
+ *   availability_status text    NOT NULL  default 'Available'
+ *   department          text
+ *   equipment           jsonb             default '[]'::jsonb
  *   created_at          timestamptz     default now()
  * ─────────────────────────────────────────────────────────────
  */
@@ -22,7 +23,7 @@ export interface Resource {
     id?: string;           // uuid in Supabase (was number in MySQL)
     name: string;
     type: string;
-    capacity: string;
+    capacity: number;
     location: string;
     availability_status: string;
     department?: string;   // Added for department-wise analytics
@@ -32,12 +33,12 @@ export interface Resource {
 
 // ─── Fallback mock data (used when Supabase is unreachable) ───
 const MOCK_RESOURCES: Resource[] = [
-    { id: '1', name: 'Main Auditorium',       type: 'Lecture Halls', capacity: '500', location: 'Block A',       availability_status: 'Available' },
-    { id: '2', name: 'Mini Auditorium',       type: 'Lecture Halls', capacity: '250', location: 'Block B',       availability_status: 'Booked' },
-    { id: '3', name: 'Z9 Hall',               type: 'Lecture Halls', capacity: '50',  location: 'Block Z',       availability_status: 'Available' },
-    { id: '4', name: 'Computer Lab',          type: 'Labs',          capacity: '50',  location: 'IT Building',   availability_status: 'Maintenance' },
-    { id: '5', name: 'Multimedia Projectors', type: 'Equipment',     capacity: '5',   location: 'IT Helpdesk',   availability_status: 'Available' },
-    { id: '6', name: 'Faculty Vehicle - Van', type: 'Vehicles',      capacity: '14',  location: 'Transport Pool', availability_status: 'Booked' }
+    { id: '1', name: 'Main Auditorium',       type: 'Lecture Halls', capacity: 500, location: 'Block A',       availability_status: 'Available',   department: 'Faculty of Computing' },
+    { id: '2', name: 'Mini Auditorium',       type: 'Lecture Halls', capacity: 250, location: 'Block B',       availability_status: 'Booked',      department: 'Faculty of Business' },
+    { id: '3', name: 'Z9 Hall',               type: 'Lecture Halls', capacity: 50,  location: 'Block Z',       availability_status: 'Available',   department: 'Faculty of Engineering' },
+    { id: '4', name: 'Computer Lab',          type: 'Labs',          capacity: 50,  location: 'IT Building',   availability_status: 'Maintenance', department: 'Faculty of Computing' },
+    { id: '5', name: 'Multimedia Projectors', type: 'Equipment',     capacity: 5,   location: 'IT Helpdesk',   availability_status: 'Available',   department: 'Faculty of Computing' },
+    { id: '6', name: 'Faculty Vehicle - Van', type: 'Vehicles',      capacity: 14,  location: 'Transport Pool', availability_status: 'Booked',      department: 'Faculty of Engineering' }
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -55,11 +56,11 @@ function toRow(resource: Partial<Resource>): Record<string, any> {
     const row: Record<string, any> = {};
     if (resource.name               !== undefined) row.name               = resource.name;
     if (resource.type               !== undefined) row.type               = resource.type;
-    if (resource.capacity           !== undefined) row.capacity           = String(resource.capacity);
+    if (resource.capacity           !== undefined) row.capacity           = Number(resource.capacity);
     if (resource.location           !== undefined) row.location           = resource.location;
     if (resource.availability_status !== undefined) row.availability_status = resource.availability_status;
     if (resource.department          !== undefined) row.department          = resource.department;
-    if (resource.equipment          !== undefined) row.equipment          = JSON.stringify(resource.equipment);
+    if (resource.equipment          !== undefined) row.equipment          = resource.equipment; // JSONB handles arrays directly
     return row;
 }
 

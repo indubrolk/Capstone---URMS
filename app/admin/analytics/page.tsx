@@ -24,7 +24,9 @@ const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 export default function AnalyticsDashboard() {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'utilization'>('overview');
-    const [timeRange, setTimeRange] = useState<'7d' | '30d' | '12m'>('7d');
+    const [timeRange, setTimeRange] = useState<'7d' | '30d' | '12m' | 'custom'>('7d');
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
     const [department, setDepartment] = useState<string>(""); // Added for department filtering
     
     const departments = [
@@ -64,12 +66,15 @@ export default function AnalyticsDashboard() {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
             const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
+            const dateParams = timeRange === 'custom' && startDate && endDate 
+                ? `&startDate=${startDate}&endDate=${endDate}` 
+                : "";
 
             const [ovRes, bkRes, rsRes, mtRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/overview?${deptParam.replace('&', '')}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/bookings?${deptParam.replace('&', '')}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/resources?${deptParam.replace('&', '')}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/maintenance?${deptParam.replace('&', '')}`, { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/overview?${deptParam.replace('&', '')}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/bookings?${deptParam.replace('&', '')}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/resources?${deptParam.replace('&', '')}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/maintenance?${deptParam.replace('&', '')}${dateParams}`, { headers })
             ]);
 
             if (!ovRes.ok || !bkRes.ok || !rsRes.ok || !mtRes.ok) throw new Error("Failed to fetch analytics data");
@@ -96,12 +101,16 @@ export default function AnalyticsDashboard() {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
             const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
+            const rangeParam = range === 'custom' ? "" : `range=${range}`;
+            const dateParams = range === 'custom' && startDate && endDate 
+                ? `&startDate=${startDate}&endDate=${endDate}` 
+                : "";
 
             const [trRes, stRes, rfRes, cfRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/booking-trends?range=${range}${deptParam}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/booking-status?${deptParam.replace('&', '')}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/resource-bookings?${deptParam.replace('&', '')}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/category-bookings?${deptParam.replace('&', '')}`, { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/booking-trends?${rangeParam}${deptParam}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/booking-status?${deptParam.replace('&', '')}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/resource-bookings?${deptParam.replace('&', '')}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/category-bookings?${deptParam.replace('&', '')}${dateParams}`, { headers })
             ]);
 
             const tr = await trRes.json();
@@ -126,10 +135,14 @@ export default function AnalyticsDashboard() {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
             const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
+            const rangeParam = range === 'custom' ? "" : `range=${range}`;
+            const dateParams = range === 'custom' && startDate && endDate 
+                ? `&startDate=${startDate}&endDate=${endDate}` 
+                : "";
 
             const [utRes, pkRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/resource-utilization?range=${range}${deptParam}`, { headers }),
-                fetch(`http://localhost:5000/api/admin/analytics/peak-usage?${deptParam.replace('&', '')}`, { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/resource-utilization?${rangeParam}${deptParam}${dateParams}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/peak-usage?${deptParam.replace('&', '')}${dateParams}`, { headers })
             ]);
 
             const ut = await utRes.json();
@@ -149,7 +162,12 @@ export default function AnalyticsDashboard() {
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
-            const response = await fetch(`http://localhost:5000/api/admin/analytics/export/${format}?type=${type}&range=${timeRange}${deptParam}`, {
+            const rangeParam = timeRange === 'custom' ? "" : `&range=${timeRange}`;
+            const dateParams = timeRange === 'custom' && startDate && endDate 
+                ? `&startDate=${startDate}&endDate=${endDate}` 
+                : "";
+                
+            const response = await fetch(`http://localhost:5000/api/admin/analytics/export/${format}?type=${type}${rangeParam}${deptParam}${dateParams}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -174,14 +192,14 @@ export default function AnalyticsDashboard() {
 
     useEffect(() => {
         if (user) fetchData();
-    }, [user, department]);
+    }, [user, department, timeRange, startDate, endDate]);
 
     useEffect(() => {
         if (user) {
             if (activeTab === 'bookings') fetchBookingReports(timeRange);
             if (activeTab === 'utilization') fetchUtilizationReports(timeRange);
         }
-    }, [user, activeTab, timeRange, department]);
+    }, [user, activeTab, timeRange, department, startDate, endDate]);
 
     if (loading) {
         return (
@@ -263,63 +281,87 @@ export default function AnalyticsDashboard() {
                             </div>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
-                            <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto max-w-full">
-                                <button 
-                                    onClick={() => setActiveTab('overview')}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'overview' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                                >
-                                    Overview
-                                </button>
-                                <button 
-                                    onClick={() => setActiveTab('bookings')}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'bookings' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                                >
-                                    Booking Stats
-                                </button>
-                                <button 
-                                    onClick={() => setActiveTab('utilization')}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'utilization' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                                >
-                                    Resource Utilization
-                                </button>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <div className="relative group">
-                                    <select
-                                        value={department}
-                                        onChange={(e) => setDepartment(e.target.value)}
-                                        className="appearance-none pl-4 pr-10 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
+                                <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto max-w-full">
+                                    <button 
+                                        onClick={() => setActiveTab('overview')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'overview' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
                                     >
-                                        <option value="">All Departments</option>
-                                        {departments.map((dept) => (
-                                            <option key={dept} value={dept}>{dept}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                        Overview
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('bookings')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'bookings' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        Booking Stats
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('utilization')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'utilization' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        Resource Utilization
+                                    </button>
                                 </div>
 
-                                <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
+                                {timeRange === 'custom' && (
+                                    <div className="flex items-center gap-2 bg-white p-1 px-3 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-right-2 duration-300">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">From</span>
+                                            <input 
+                                                type="date" 
+                                                value={startDate} 
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 p-0 w-28"
+                                            />
+                                        </div>
+                                        <div className="w-px h-4 bg-slate-200 mx-1" />
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">To</span>
+                                            <input 
+                                                type="date" 
+                                                value={endDate} 
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 p-0 w-28"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
-                                <button
-                                    onClick={() => handleExport('pdf', activeTab)}
-                                    disabled={!!exporting}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
-                                >
-                                    <FileText className="w-4 h-4 text-red-500" />
-                                    {exporting === `${activeTab}-pdf` ? 'Generating...' : 'PDF'}
-                                </button>
-                                <button
-                                    onClick={() => handleExport('excel', activeTab)}
-                                    disabled={!!exporting}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981] text-white font-bold text-xs rounded-xl border border-emerald-600 hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50"
-                                >
-                                    <PieIcon className="w-4 h-4" />
-                                    {exporting === `${activeTab}-excel` ? 'Preparing...' : 'Excel'}
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative group">
+                                        <select
+                                            value={department}
+                                            onChange={(e) => setDepartment(e.target.value)}
+                                            className="appearance-none pl-4 pr-10 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+                                        >
+                                            <option value="">All Departments</option>
+                                            {departments.map((dept) => (
+                                                <option key={dept} value={dept}>{dept}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                    </div>
+
+                                    <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
+
+                                    <button
+                                        onClick={() => handleExport('pdf', activeTab)}
+                                        disabled={!!exporting}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
+                                    >
+                                        <FileText className="w-4 h-4 text-red-500" />
+                                        {exporting === `${activeTab}-pdf` ? 'Generating...' : 'PDF'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleExport('excel', activeTab)}
+                                        disabled={!!exporting}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981] text-white font-bold text-xs rounded-xl border border-emerald-600 hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50"
+                                    >
+                                        <PieIcon className="w-4 h-4" />
+                                        {exporting === `${activeTab}-excel` ? 'Preparing...' : 'Excel'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
                     </div>
 
                     {error && (
@@ -366,7 +408,12 @@ export default function AnalyticsDashboard() {
                                         <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
                                             <TrendingUp className="w-5 h-5 text-blue-500" /> Recent Activity
                                         </h3>
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">Last 7 Days</span>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">
+                                                {timeRange === 'custom' ? 'Custom Range' : `Last ${timeRange === '7d' ? '7 Days' : timeRange === '30d' ? '30 Days' : '12 Months'}`}
+                                            </span>
+                                            <TimeRangePicker value={timeRange} onChange={setTimeRange} mini />
+                                        </div>
                                     </div>
                                     <div className="h-[300px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
@@ -447,9 +494,12 @@ export default function AnalyticsDashboard() {
 
                                 {/* Categories */}
                                 <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-                                    <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-2">
-                                        <LayoutDashboard className="w-5 h-5 text-purple-500" /> Asset Distribution
-                                    </h3>
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                            <LayoutDashboard className="w-5 h-5 text-purple-500" /> Asset Distribution
+                                        </h3>
+                                        <TimeRangePicker value={timeRange} onChange={setTimeRange} mini />
+                                    </div>
                                     <div className="h-[250px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={resourceCategoryData} layout="vertical">
@@ -580,16 +630,23 @@ export default function AnalyticsDashboard() {
     );
 }
 
-function TimeRangePicker({ value, onChange }: { value: string, onChange: (v: any) => void }) {
+function TimeRangePicker({ value, onChange, mini }: { value: string, onChange: (v: any) => void, mini?: boolean }) {
+    const options = [
+        { label: '7D', full: '7 Days', value: '7d' },
+        { label: '30D', full: '30 Days', value: '30d' },
+        { label: '12M', full: '12 Months', value: '12m' },
+        { label: 'Custom', full: 'Custom Range', value: 'custom' }
+    ];
+
     return (
-        <div className="flex items-center gap-2">
-            {(['7d', '30d', '12m'] as const).map((r) => (
+        <div className="flex items-center gap-1 sm:gap-2">
+            {options.map((opt) => (
                 <button 
-                    key={r}
-                    onClick={() => onChange(r)}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all border ${value === r ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    key={opt.value}
+                    onClick={() => onChange(opt.value)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all border ${value === opt.value ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                 >
-                    {r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : '12 Months'}
+                    {mini ? opt.label : opt.full}
                 </button>
             ))}
         </div>

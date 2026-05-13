@@ -14,6 +14,21 @@ const applyDeptFilter = (query: any, department: string | undefined, joinPath?: 
 };
 
 /**
+ * Helper to apply date range filtering to Supabase queries
+ */
+const applyDateRangeFilter = (query: any, startDate: string | undefined, endDate: string | undefined, column = 'created_at') => {
+    if (startDate) {
+        query = query.gte(column, startDate);
+    }
+    if (endDate) {
+        // Append end of day if only date is provided
+        const end = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
+        query = query.lte(column, end);
+    }
+    return query;
+};
+
+/**
  * GET /api/admin/analytics/overview
  * High-level summary metrics
  */
@@ -22,10 +37,15 @@ export const getOverviewAnalytics = async (req: AuthRequest, res: Response) => {
         const supabase = req.supabase;
         const now = new Date().toISOString();
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
 
         // 1. Resource Counts
         let resQuery = supabase.from('resources').select('*', { count: 'exact', head: true });
         resQuery = applyDeptFilter(resQuery, department);
+        // Note: Resources are usually not filtered by date unless we want "added in date range"
+        // But for consistency with overall report period, we can apply it to created_at if desired.
+        // For now, resources are global system state.
         const { count: totalResources } = await resQuery;
 
         let maintQuery = supabase.from('resources').select('*', { count: 'exact', head: true }).eq('availability_status', 'Maintenance');
@@ -33,13 +53,13 @@ export const getOverviewAnalytics = async (req: AuthRequest, res: Response) => {
         const { count: resourcesUnderMaintenance } = await maintQuery;
 
         // 2. Booking Counts
-        // Note: For bookings we join with resources to filter by department
         let activeBookingsQuery = supabase
             .from('bookings')
             .select('*, resources!inner(department)', { count: 'exact', head: true })
             .eq('status', 'Approved')
             .gt('end_time', now);
         activeBookingsQuery = applyDeptFilter(activeBookingsQuery, department, 'resources');
+        activeBookingsQuery = applyDateRangeFilter(activeBookingsQuery, startDate, endDate);
         const { count: activeBookings } = await activeBookingsQuery;
 
         let completedBookingsQuery = supabase
@@ -47,6 +67,7 @@ export const getOverviewAnalytics = async (req: AuthRequest, res: Response) => {
             .select('*, resources!inner(department)', { count: 'exact', head: true })
             .eq('status', 'Completed');
         completedBookingsQuery = applyDeptFilter(completedBookingsQuery, department, 'resources');
+        completedBookingsQuery = applyDateRangeFilter(completedBookingsQuery, startDate, endDate);
         const { count: completedBookings } = await completedBookingsQuery;
 
         // 3. Maintenance Counts
@@ -54,6 +75,7 @@ export const getOverviewAnalytics = async (req: AuthRequest, res: Response) => {
             .from('maintenance_tickets')
             .select('*, resources!inner(department)', { count: 'exact', head: true });
         totalMaintQuery = applyDeptFilter(totalMaintQuery, department, 'resources');
+        totalMaintQuery = applyDateRangeFilter(totalMaintQuery, startDate, endDate);
         const { count: totalMaintenanceTickets } = await totalMaintQuery;
 
         let pendingMaintQuery = supabase
@@ -61,11 +83,13 @@ export const getOverviewAnalytics = async (req: AuthRequest, res: Response) => {
             .select('*, resources!inner(department)', { count: 'exact', head: true })
             .in('status', ['OPEN', 'IN_PROGRESS']);
         pendingMaintQuery = applyDeptFilter(pendingMaintQuery, department, 'resources');
+        pendingMaintQuery = applyDateRangeFilter(pendingMaintQuery, startDate, endDate);
         const { count: pendingMaintenanceTasks } = await pendingMaintQuery;
 
         // 4. Most Booked Resource
         let mbQuery = supabase.from('bookings').select('resource_id, resources!inner(department)');
         mbQuery = applyDeptFilter(mbQuery, department, 'resources');
+        mbQuery = applyDateRangeFilter(mbQuery, startDate, endDate);
         const { data: bookingData } = await mbQuery;
         
         let mostBookedResource = "N/A";
@@ -112,12 +136,15 @@ export const getBookingAnalytics = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
 
         // Booking status distribution
         let statusQuery = supabase
             .from('bookings')
             .select('status, resources!inner(department)');
         statusQuery = applyDeptFilter(statusQuery, department, 'resources');
+        statusQuery = applyDateRangeFilter(statusQuery, startDate, endDate);
         const { data: statusData } = await statusQuery;
         
         const statusDistribution: Record<string, number> = {
@@ -132,23 +159,38 @@ export const getBookingAnalytics = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        // Booking trends over time (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        // Booking trends over time
+        // If startDate/endDate provided, use them, otherwise default to 7 days
+        let start = new Date();
+        if (startDate) {
+            start = new Date(startDate);
+        } else {
+            start.setDate(start.getDate() - 7);
+        }
         
+        let end = new Date();
+        if (endDate) {
+            end = new Date(endDate);
+        }
+
         let trendQuery = supabase
             .from('bookings')
             .select('created_at, resources!inner(department)')
-            .gte('created_at', sevenDaysAgo.toISOString());
+            .gte('created_at', start.toISOString());
+        
+        if (endDate) {
+            trendQuery = trendQuery.lte('created_at', end.toISOString());
+        }
+
         trendQuery = applyDeptFilter(trendQuery, department, 'resources');
         const { data: trendData } = await trendQuery;
 
         const trends: Record<string, number> = {};
-        // Initialize last 7 days
-        for (let i = 0; i < 7; i++) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            trends[d.toISOString().split('T')[0]] = 0;
+        // Initialize keys
+        let current = new Date(start);
+        while (current <= end) {
+            trends[current.toISOString().split('T')[0]] = 0;
+            current.setDate(current.getDate() + 1);
         }
 
         trendData?.forEach((b: any) => {
@@ -181,6 +223,8 @@ export const getResourceAnalytics = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
 
         // Resources by category
         let resQuery = supabase.from('resources').select('type');
@@ -195,6 +239,7 @@ export const getResourceAnalytics = async (req: AuthRequest, res: Response) => {
         // Top 5 most booked resources
         let bkQuery = supabase.from('bookings').select('resource_id, resources!inner(department)');
         bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+        bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
         const { data: bookingData } = await bkQuery;
         
         const counts: Record<string, number> = {};
@@ -230,11 +275,14 @@ export const getMaintenanceAnalytics = async (req: AuthRequest, res: Response) =
     try {
         const supabase = req.supabase;
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
 
         let mtQuery = supabase
             .from('maintenance_tickets')
             .select('status, created_at, completed_at, resource_id, resources!inner(department)');
         mtQuery = applyDeptFilter(mtQuery, department, 'resources');
+        mtQuery = applyDateRangeFilter(mtQuery, startDate, endDate);
         const { data: ticketData } = await mtQuery;
 
         const statusDistribution: Record<string, number> = {
@@ -298,25 +346,41 @@ export const getBookingTrends = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
         const range = (req.query.range as string) || '7d';
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+        const department = req.query.department as string;
         
-        let startDate = new Date();
+        let start = new Date();
         let interval: 'day' | 'month' = 'day';
 
-        if (range === '30d') {
-            startDate.setDate(startDate.getDate() - 30);
-            interval = 'day';
-        } else if (range === '12m') {
-            startDate.setFullYear(startDate.getFullYear() - 1);
-            interval = 'month';
+        if (startDate) {
+            start = new Date(startDate);
+            // If range is long, switch to month interval
+            if (endDate) {
+                const diff = new Date(endDate).getTime() - start.getTime();
+                if (diff > 1000 * 60 * 60 * 24 * 90) interval = 'month'; // > 90 days
+            }
         } else {
-            startDate.setDate(startDate.getDate() - 7);
-            interval = 'day';
+            if (range === '30d') {
+                start.setDate(start.getDate() - 30);
+                interval = 'day';
+            } else if (range === '12m') {
+                start.setFullYear(start.getFullYear() - 1);
+                interval = 'month';
+            } else {
+                start.setDate(start.getDate() - 7);
+                interval = 'day';
+            }
         }
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('bookings')
-            .select('created_at')
-            .gte('created_at', startDate.toISOString());
+            .select('created_at, resources!inner(department)');
+        
+        query = applyDeptFilter(query, department, 'resources');
+        query = applyDateRangeFilter(query, startDate || start.toISOString(), endDate);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -330,9 +394,9 @@ export const getBookingTrends = async (req: AuthRequest, res: Response) => {
         };
 
         // Pre-fill keys to ensure all dates are present
-        let current = new Date(startDate);
-        const now = new Date();
-        while (current <= now) {
+        let current = new Date(start);
+        const end = endDate ? new Date(endDate) : new Date();
+        while (current <= end) {
             trends[getKey(current)] = 0;
             if (interval === 'month') {
                 current.setMonth(current.getMonth() + 1);
@@ -364,7 +428,15 @@ export const getBookingTrends = async (req: AuthRequest, res: Response) => {
 export const getBookingStatus = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
-        const { data, error } = await supabase.from('bookings').select('status');
+        const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+
+        let query = supabase.from('bookings').select('status, resources!inner(department)');
+        query = applyDeptFilter(query, department, 'resources');
+        query = applyDateRangeFilter(query, startDate, endDate);
+
+        const { data, error } = await query;
         
         if (error) throw error;
 
@@ -395,9 +467,12 @@ export const getResourceBookings = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
 
         let bkQuery = supabase.from('bookings').select('resource_id, resources!inner(department)');
         bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+        bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
         const { data, error } = await bkQuery;
         
         if (error) throw error;
@@ -435,11 +510,14 @@ export const getCategoryBookings = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
         
         let bkQuery = supabase
             .from('bookings')
             .select('resource_id, resources!inner(type, department)');
         bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+        bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
         const { data, error } = await bkQuery;
 
         if (error) throw error;
@@ -465,14 +543,27 @@ export const getResourceUtilization = async (req: AuthRequest, res: Response) =>
     try {
         const supabase = req.supabase;
         const range = (req.query.range as string) || '30d';
+        const department = req.query.department as string;
+        const startDateParam = req.query.startDate as string;
+        const endDateParam = req.query.endDate as string;
         
         let days = 30;
-        if (range === '7d') days = 7;
-        else if (range === '12m') days = 365;
+        let start = new Date();
+        let end = new Date();
 
-        const department = req.query.department as string;
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
+        if (startDateParam) {
+            start = new Date(startDateParam);
+            if (endDateParam) {
+                end = new Date(endDateParam);
+                days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+            } else {
+                days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+            }
+        } else {
+            if (range === '7d') days = 7;
+            else if (range === '12m') days = 365;
+            start.setDate(start.getDate() - days);
+        }
 
         // Fetch resources
         let resQuery = supabase.from('resources').select('id, name, type');
@@ -485,9 +576,11 @@ export const getResourceUtilization = async (req: AuthRequest, res: Response) =>
         let bkQuery = supabase
             .from('bookings')
             .select('resource_id, start_time, end_time, resources!inner(department)')
-            .in('status', ['Approved', 'Completed'])
-            .gte('start_time', startDate.toISOString());
+            .in('status', ['Approved', 'Completed']);
+        
         bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+        bkQuery = applyDateRangeFilter(bkQuery, startDateParam || start.toISOString(), endDateParam, 'start_time');
+        
         const { data: bookings, error: bkError } = await bkQuery;
 
         if (bkError) throw bkError;
@@ -508,9 +601,9 @@ export const getResourceUtilization = async (req: AuthRequest, res: Response) =>
 
         bookings?.forEach((b: any) => {
             if (utilizationMap[b.resource_id]) {
-                const start = new Date(b.start_time);
-                const end = new Date(b.end_time);
-                const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                const bStart = new Date(b.start_time);
+                const bEnd = new Date(b.end_time);
+                const durationHours = (bEnd.getTime() - bStart.getTime()) / (1000 * 60 * 60);
                 
                 utilizationMap[b.resource_id].totalBookings++;
                 utilizationMap[b.resource_id].totalHours += Math.max(0, durationHours);
@@ -537,8 +630,9 @@ export const getResourceUtilization = async (req: AuthRequest, res: Response) =>
 export const getPeakUsage = async (req: AuthRequest, res: Response) => {
     try {
         const supabase = req.supabase;
-        
         const department = req.query.department as string;
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
         
         let bkQuery = supabase
             .from('bookings')
@@ -546,6 +640,7 @@ export const getPeakUsage = async (req: AuthRequest, res: Response) => {
             .in('status', ['Approved', 'Completed']);
         
         bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+        bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate, 'start_time');
         const { data, error } = await bkQuery;
 
         if (error) {
@@ -603,33 +698,39 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
     try {
         const type = (req.query.type as string) || 'overview';
         const range = (req.query.range as string) || '7d';
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
         const supabase = req.supabase;
         const now = new Date().toISOString();
+        const department = req.query.department as string;
+
+        const dateLabel = startDate && endDate 
+            ? `${startDate} to ${endDate}` 
+            : `Range: ${range}`;
 
         if (type === 'overview') {
-            // Re-use logic from getOverviewAnalytics
-            const department = req.query.department as string;
-
             let resQuery = supabase.from('resources').select('*', { count: 'exact', head: true });
             resQuery = applyDeptFilter(resQuery, department);
             const { count: totalResources } = await resQuery;
 
             let bkQuery = supabase.from('bookings').select('*, resources!inner(department)', { count: 'exact', head: true }).eq('status', 'Approved').gt('end_time', now);
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
             const { count: activeBookings } = await bkQuery;
 
             let mtQuery = supabase.from('maintenance_tickets').select('*, resources!inner(department)', { count: 'exact', head: true }).in('status', ['OPEN', 'IN_PROGRESS']);
             mtQuery = applyDeptFilter(mtQuery, department, 'resources');
+            mtQuery = applyDateRangeFilter(mtQuery, startDate, endDate);
             const { count: pendingMaintenance } = await mtQuery;
             
             const utilization = totalResources ? Math.round(((activeBookings || 0) / totalResources) * 100) : 0;
 
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'attachment; filename="urms-overview-report.pdf"');
+            res.setHeader('Content-Disposition', `attachment; filename="urms-overview-report.pdf"`);
 
             generatePDFReport(res, {
                 title: 'URMS System Overview Report',
-                subtitle: department ? `Department: ${department}` : 'Generated from Analytics Dashboard',
+                subtitle: `${department ? `Department: ${department} | ` : ''}${dateLabel}`,
                 summaryItems: [
                     { label: 'Total Resources', value: totalResources || 0 },
                     { label: 'Active Bookings', value: activeBookings || 0 },
@@ -650,11 +751,9 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
                 ]
             });
         } else if (type === 'bookings') {
-            // Booking statistics
-            const department = req.query.department as string;
-
             let stQuery = supabase.from('bookings').select('status, resources!inner(department)');
             stQuery = applyDeptFilter(stQuery, department, 'resources');
+            stQuery = applyDateRangeFilter(stQuery, startDate, endDate);
             const { data: statusData } = await stQuery;
 
             const counts: Record<string, number> = { 'Pending': 0, 'Approved': 0, 'Completed': 0, 'Cancelled': 0, 'Rejected': 0 };
@@ -662,6 +761,7 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
 
             let bkQuery = supabase.from('bookings').select('resource_id, resources!inner(department)');
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
             const { data: rfRes } = await bkQuery;
 
             const resCounts: Record<string, number> = {};
@@ -678,7 +778,7 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
 
             generatePDFReport(res, {
                 title: 'URMS Booking Statistics Report',
-                subtitle: department ? `Department: ${department}` : `Booking metrics and distribution (${range})`,
+                subtitle: `${department ? `Department: ${department} | ` : ''}${dateLabel}`,
                 sections: [
                     {
                         title: 'Booking Status Distribution',
@@ -693,15 +793,13 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
                 ]
             });
         } else if (type === 'utilization') {
-            // Utilization Report
-            const department = req.query.department as string;
-
             let resQuery = supabase.from('resources').select('id, name, type');
             resQuery = applyDeptFilter(resQuery, department);
             const { data: resources } = await resQuery;
 
             let bkQuery = supabase.from('bookings').select('resource_id, start_time, end_time, resources!inner(department)').in('status', ['Approved', 'Completed']);
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate, 'start_time');
             const { data: bookings } = await bkQuery;
             
             const utilizationMap: Record<string, any> = {};
@@ -730,7 +828,7 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
 
             generatePDFReport(res, {
                 title: 'Resource Utilization Report',
-                subtitle: 'Asset efficiency and usage statistics',
+                subtitle: `${department ? `Department: ${department} | ` : ''}${dateLabel}`,
                 sections: [
                     {
                         title: 'Detailed Resource Usage',
@@ -754,22 +852,30 @@ export const exportAnalyticsPDF = async (req: AuthRequest, res: Response) => {
 export const exportAnalyticsExcel = async (req: AuthRequest, res: Response) => {
     try {
         const type = (req.query.type as string) || 'overview';
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+        const range = (req.query.range as string) || '7d';
         const supabase = req.supabase;
         const now = new Date().toISOString();
+        const department = req.query.department as string;
+
+        const dateLabel = startDate && endDate 
+            ? `${startDate} to ${endDate}` 
+            : `Range: ${range}`;
 
         if (type === 'overview') {
-            const department = req.query.department as string;
-
             let resQuery = supabase.from('resources').select('*', { count: 'exact', head: true });
             resQuery = applyDeptFilter(resQuery, department);
             const { count: totalResources } = await resQuery;
 
             let bkQuery = supabase.from('bookings').select('*, resources!inner(department)', { count: 'exact', head: true }).eq('status', 'Approved').gt('end_time', now);
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
             const { count: activeBookings } = await bkQuery;
 
             let mtQuery = supabase.from('maintenance_tickets').select('*, resources!inner(department)', { count: 'exact', head: true }).in('status', ['OPEN', 'IN_PROGRESS']);
             mtQuery = applyDeptFilter(mtQuery, department, 'resources');
+            mtQuery = applyDateRangeFilter(mtQuery, startDate, endDate);
             const { count: pendingMaintenance } = await mtQuery;
             
             generateExcelReport(res, 'urms-overview.xlsx', [
@@ -780,17 +886,17 @@ export const exportAnalyticsExcel = async (req: AuthRequest, res: Response) => {
                         { Metric: 'Active Bookings', Value: activeBookings || 0 },
                         { Metric: 'Pending Maintenance', Value: pendingMaintenance || 0 },
                         { Metric: 'Department', Value: department || 'All' },
-                        { Metric: 'Report Date', Value: new Date().toLocaleString() }
+                        { Metric: 'Date Range', Value: dateLabel },
+                        { Metric: 'Report Generated', Value: new Date().toLocaleString() }
                     ]
                 }
             ]);
         } else if (type === 'bookings') {
-            const department = req.query.department as string;
-
             let bkQuery = supabase
                 .from('bookings')
                 .select('id, resource_id, start_time, end_time, status, user_id, resources!inner(name, type, department)');
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate);
             const { data: bookings } = await bkQuery;
 
             const bookingData = bookings?.map((b: any) => ({
@@ -800,26 +906,37 @@ export const exportAnalyticsExcel = async (req: AuthRequest, res: Response) => {
                 'Start': new Date(b.start_time).toLocaleString(),
                 'End': new Date(b.end_time).toLocaleString(),
                 'Status': b.status,
-                'User ID': b.user_id
+                'Department': b.resources?.department || 'N/A'
             })) || [];
 
             generateExcelReport(res, 'urms-bookings.xlsx', [
-                { name: 'Bookings', data: bookingData }
+                {
+                    name: 'Bookings',
+                    data: bookingData
+                },
+                {
+                    name: 'Metadata',
+                    data: [
+                        { 'Report Title': 'URMS Booking Statistics' },
+                        { 'Date Range': dateLabel },
+                        { 'Department': department || 'All' },
+                        { 'Generated At': new Date().toLocaleString() }
+                    ]
+                }
             ]);
         } else if (type === 'utilization') {
-            const department = req.query.department as string;
-
-            let resQuery = supabase.from('resources').select('id, name, type');
+            let resQuery = supabase.from('resources').select('id, name, type, department');
             resQuery = applyDeptFilter(resQuery, department);
             const { data: resources } = await resQuery;
 
             let bkQuery = supabase.from('bookings').select('resource_id, start_time, end_time, resources!inner(department)').in('status', ['Approved', 'Completed']);
             bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate, 'start_time');
             const { data: bookings } = await bkQuery;
             
             const utilizationMap: Record<string, any> = {};
             resources?.forEach((r: any) => {
-                utilizationMap[r.id] = { Name: r.name, Category: r.type, 'Total Bookings': 0, 'Total Hours': 0 };
+                utilizationMap[r.id] = { Resource: r.name, Category: r.type, Department: r.department, 'Total Bookings': 0, 'Total Hours': 0 };
             });
 
             bookings?.forEach((b: any) => {
@@ -831,13 +948,25 @@ export const exportAnalyticsExcel = async (req: AuthRequest, res: Response) => {
                 }
             });
 
-            const data = Object.values(utilizationMap).map((item: any) => ({
+            const excelData = Object.values(utilizationMap).map((item: any) => ({
                 ...item,
                 'Total Hours': Math.round(item['Total Hours'] * 10) / 10
             }));
 
             generateExcelReport(res, 'urms-utilization.xlsx', [
-                { name: 'Utilization', data: data }
+                {
+                    name: 'Utilization',
+                    data: excelData
+                },
+                {
+                    name: 'Metadata',
+                    data: [
+                        { 'Report Title': 'Resource Utilization Report' },
+                        { 'Date Range': dateLabel },
+                        { 'Department': department || 'All' },
+                        { 'Generated At': new Date().toLocaleString() }
+                    ]
+                }
             ]);
         } else {
             res.status(400).json({ status: "error", message: "Invalid report type" });

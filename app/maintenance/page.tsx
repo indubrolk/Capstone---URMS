@@ -81,6 +81,31 @@ export default function AdminMaintenanceDashboard() {
     }
   };
 
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/maintenance-tickets/report/${format}`, {
+        headers: {
+          'Authorization': `Bearer dev-token`
+        }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `maintenance-report-${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        alert('Failed to generate report');
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
   const getCurrentDateStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -186,6 +211,24 @@ export default function AdminMaintenanceDashboard() {
                 <AlertTriangle className="w-5 h-5" />
                 Create Task
               </button>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleExport('pdf')}
+                  className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all border border-white/10 flex items-center justify-center gap-2"
+                >
+                  <Activity className="w-4 h-4 text-blue-300" />
+                  Export PDF
+                </button>
+                <button 
+                  onClick={() => handleExport('excel')}
+                  className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 backdrop-blur-md px-4 py-2.5 rounded-xl text-white text-xs font-bold transition-all border border-emerald-500/20 flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Export Excel
+                </button>
+              </div>
+
               {stats.overdue > 0 && (
                 <div 
                   className="bg-red-500/10 border border-red-500/20 backdrop-blur-md px-6 py-4 rounded-2xl flex items-center gap-4 animate-in fade-in zoom-in duration-500"

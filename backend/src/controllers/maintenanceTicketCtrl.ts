@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { MaintenanceTicketModel } from '../models/maintenanceTicket.model';
 import { ResourceModel } from '../models/resource.model';
 import { generateMaintenanceReportPDF } from '../services/pdfReportService';
+import { generateExcelReport } from '../services/exportService';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 // Helper for RBAC
@@ -266,5 +267,47 @@ export const generatePdfReport = async (req: AuthRequest, res: Response): Promis
     } catch (error) {
         console.error('Error generating PDF report:', error);
         res.status(500).json({ message: 'Internal server error during PDF generation' });
+    }
+};
+
+export const generateExcelReportAction = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user || !isStaffOrAdmin(req.user)) {
+            res.status(403).json({ message: 'Forbidden: Only administrators or maintenance staff can generate reports' });
+            return;
+        }
+
+        const filters: any = {};
+        if (req.query.status) filters.status = req.query.status;
+        if (req.query.priority) filters.priority = req.query.priority;
+        if (req.query.resourceId) filters.resourceId = req.query.resourceId;
+
+        const tickets = await MaintenanceTicketModel.findAll(filters, req.supabase);
+
+        if (!tickets || tickets.length === 0) {
+            res.status(404).json({ message: 'No data available to generate report' });
+            return;
+        }
+
+        const excelData = tickets.map(t => ({
+            'Ticket ID': t.id,
+            'Title': t.title,
+            'Resource ID': t.resourceId,
+            'Description': t.description,
+            'Priority': t.priority,
+            'Status': t.status,
+            'Created By': t.createdBy,
+            'Assigned To': t.assignedTo || 'Unassigned',
+            'Created Date': t.created_at ? new Date(t.created_at).toLocaleString() : 'N/A',
+            'Completed Date': t.completed_at ? new Date(t.completed_at).toLocaleString() : 'N/A',
+            'Outcome': t.outcome || 'N/A'
+        }));
+
+        generateExcelReport(res, 'maintenance-report.xlsx', [
+            { name: 'Maintenance Tickets', data: excelData }
+        ]);
+    } catch (error) {
+        console.error('Error generating Excel report:', error);
+        res.status(500).json({ message: 'Internal server error during Excel generation' });
     }
 };

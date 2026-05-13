@@ -51,6 +51,7 @@ export default function RegisterPage() {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [role, setRole] = useState("");
+    const [department, setDepartment] = useState(""); // Added for department-wise analytics
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -60,7 +61,7 @@ export default function RegisterPage() {
     const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const validateForm = () => {
-        if (!fullName || !email || !role || !password || !confirmPassword) {
+        if (!fullName || !email || !role || !department || !password || !confirmPassword) {
             setError("All fields are required.");
             return false;
         }
@@ -100,6 +101,7 @@ export default function RegisterPage() {
                 name: fullName.trim(),
                 email: email.toLowerCase(),
                 role: role.toLowerCase() as any,
+                department: department // Persist department
             });
 
             setSuccess("Account created! Redirecting to sign in…");
@@ -285,6 +287,39 @@ export default function RegisterPage() {
                                     <option value="Lecturer" className="bg-[#0D1428] text-white">Lecturer</option>
                                     <option value="Student" className="bg-[#0D1428] text-white">Student</option>
                                     <option value="Maintenance" className="bg-[#0D1428] text-white">Maintenance</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                    <ChevronDown className="h-4 w-4 text-slate-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Department/Faculty */}
+                        <div>
+                            <label htmlFor="department" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                                Faculty / Department
+                            </label>
+                            <div className={`relative transition-all duration-200 ${focusedField === "department" ? "scale-[1.01]" : ""}`}>
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Sparkles className={`h-4 w-4 transition-colors ${focusedField === "department" ? "text-blue-400" : "text-slate-600"}`} />
+                                </div>
+                                <select
+                                    id="department"
+                                    required
+                                    value={department}
+                                    onChange={(e) => setDepartment(e.target.value)}
+                                    onFocus={() => setFocusedField("department")}
+                                    onBlur={() => setFocusedField(null)}
+                                    disabled={loading}
+                                    className={`${inputBase} pr-10 appearance-none ${!department ? "text-slate-600" : ""}`}
+                                >
+                                    <option value="" disabled className="bg-[#0D1428] text-slate-400">Select your faculty</option>
+                                    <option value="Faculty of Computing" className="bg-[#0D1428] text-white">Faculty of Computing</option>
+                                    <option value="Faculty of Applied Sciences" className="bg-[#0D1428] text-white">Faculty of Applied Sciences</option>
+                                    <option value="Faculty of Management" className="bg-[#0D1428] text-white">Faculty of Management</option>
+                                    <option value="Faculty of Engineering" className="bg-[#0D1428] text-white">Faculty of Engineering</option>
+                                    <option value="Faculty of Business" className="bg-[#0D1428] text-white">Faculty of Business</option>
+                                    <option value="Faculty of Medicine" className="bg-[#0D1428] text-white">Faculty of Medicine</option>
                                 </select>
                                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                                     <ChevronDown className="h-4 w-4 text-slate-600" />

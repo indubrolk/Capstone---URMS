@@ -30,11 +30,11 @@ async function seed() {
         console.log('Seeding Users...');
         try {
             const { error: userErr } = await supabase.from('users').insert([
-                { id: 'mock-admin',       name: 'System Admin',      email: 'admin@demo.lk',       role: 'admin' },
-                { id: 'mock-student',     name: 'John Student',      email: 'student@demo.lk',     role: 'student' },
-                { id: 'mock-lecturer',    name: 'Dr. Smith',         email: 'lecturer@demo.lk',    role: 'lecturer' },
-                { id: 'mock-maintenance', name: 'Mike Technician',    email: 'maintenance@demo.lk', role: 'maintenance' },
-                { id: 'mock-student-2',   name: 'Jane Doe',          email: 'jane@demo.lk',        role: 'student' },
+                { id: 'mock-admin',       name: 'System Admin',      email: 'admin@demo.lk',       role: 'admin',       department: 'Faculty of Computing' },
+                { id: 'mock-student',     name: 'John Student',      email: 'student@demo.lk',     role: 'student',     department: 'Faculty of Applied Sciences' },
+                { id: 'mock-lecturer',    name: 'Dr. Smith',         email: 'lecturer@demo.lk',    role: 'lecturer',    department: 'Faculty of Computing' },
+                { id: 'mock-maintenance', name: 'Mike Technician',    email: 'maintenance@demo.lk', role: 'maintenance', department: 'Faculty of Management' },
+                { id: 'mock-student-2',   name: 'Jane Doe',          email: 'jane@demo.lk',        role: 'student',     department: 'Faculty of Computing' },
             ]);
             if (userErr) {
                 console.warn('⚠️ User seeding skipped or failed (likely RLS). Continuing with other tables...');
@@ -50,16 +50,16 @@ async function seed() {
         const { data: resources, error: resErr } = await supabase
             .from('resources')
             .insert([
-                { name: 'Lecture Hall 01',  type: 'Lecture Halls', capacity: '150', location: 'Block B',       availability_status: 'Available', equipment: ['Projector', 'Whiteboard', 'AC'] },
-                { name: 'Physics Lab',      type: 'Labs',          capacity: '40',  location: 'Science Block', availability_status: 'Available', equipment: ['Oscilloscopes', 'Multimeters'] },
-                { name: 'Mini Auditorium',  type: 'Lecture Halls', capacity: '200', location: 'Main Building', availability_status: 'Available', equipment: ['Sound System', 'Projector', 'Stage'] },
-                { name: 'Meeting Room A',   type: 'Rooms',         capacity: '20',  location: 'Admin Block',   availability_status: 'Available', equipment: ['Conference Phone', 'Display Screen'] },
-                { name: 'Chemistry Lab',    type: 'Labs',          capacity: '50',  location: 'Science Block', availability_status: 'Available', equipment: ['Fume Hoods', 'Microscopes'] },
-                { name: 'Computer Lab 01',  type: 'Labs',          capacity: '60',  location: 'IT Center',     availability_status: 'Available', equipment: ['60 PCs', 'Projector', 'High-Speed Internet'] },
-                { name: 'Faculty Van 01',   type: 'Vehicles',      capacity: '14',  location: 'Transport Pool',availability_status: 'Available', equipment: ['GPS', 'AC'] },
-                { name: 'Projector X1',     type: 'Equipment',     capacity: '1',   location: 'IT Desk',       availability_status: 'Available', equipment: ['VGA Cable', 'Remote'] },
-                { name: 'Seminar Room 2',   type: 'Rooms',         capacity: '30',  location: 'Block C',       availability_status: 'Maintenance', equipment: ['Smart Board'] },
-                { name: 'Hall 7',           type: 'Lecture Halls', capacity: '100', location: 'Block D',       availability_status: 'Booked',    equipment: ['Projector'] },
+                { name: 'Lecture Hall 01',  type: 'Lecture Halls', capacity: '150', location: 'Block B',       availability_status: 'Available',   department: 'Faculty of Computing', equipment: ['Projector', 'Whiteboard', 'AC'] },
+                { name: 'Physics Lab',      type: 'Labs',          capacity: '40',  location: 'Science Block', availability_status: 'Available',   department: 'Faculty of Applied Sciences', equipment: ['Oscilloscopes', 'Multimeters'] },
+                { name: 'Mini Auditorium',  type: 'Lecture Halls', capacity: '200', location: 'Main Building', availability_status: 'Available',   department: 'Faculty of Management', equipment: ['Sound System', 'Projector', 'Stage'] },
+                { name: 'Meeting Room A',   type: 'Rooms',         capacity: '20',  location: 'Admin Block',   availability_status: 'Available',   department: 'Faculty of Computing', equipment: ['Conference Phone', 'Display Screen'] },
+                { name: 'Chemistry Lab',    type: 'Labs',          capacity: '50',  location: 'Science Block', availability_status: 'Available',   department: 'Faculty of Applied Sciences', equipment: ['Fume Hoods', 'Microscopes'] },
+                { name: 'Computer Lab 01',  type: 'Labs',          capacity: '60',  location: 'IT Center',     availability_status: 'Available',   department: 'Faculty of Computing', equipment: ['60 PCs', 'Projector', 'High-Speed Internet'] },
+                { name: 'Faculty Van 01',   type: 'Vehicles',      capacity: '14',  location: 'Transport Pool',availability_status: 'Available',   department: 'Faculty of Management', equipment: ['GPS', 'AC'] },
+                { name: 'Projector X1',     type: 'Equipment',     capacity: '1',   location: 'IT Desk',       availability_status: 'Available',   department: 'Faculty of Computing', equipment: ['VGA Cable', 'Remote'] },
+                { name: 'Seminar Room 2',   type: 'Rooms',         capacity: '30',  location: 'Block C',       availability_status: 'Maintenance', department: 'Faculty of Applied Sciences', equipment: ['Smart Board'] },
+                { name: 'Hall 7',           type: 'Lecture Halls', capacity: '100', location: 'Block D',       availability_status: 'Booked',      department: 'Faculty of Management', equipment: ['Projector'] },
             ])
             .select();
 

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     name       TEXT,
     email      TEXT UNIQUE,
     role       TEXT NOT NULL DEFAULT 'student',  -- 'student' | 'lecturer' | 'admin' | 'maintenance'
+    department TEXT,                       -- Added for department-wise analytics
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS resources (
     capacity            TEXT NOT NULL DEFAULT '0',
     location            TEXT NOT NULL,
     availability_status TEXT NOT NULL DEFAULT 'Available',
+    department          TEXT,              -- Added for department-wise analytics
     equipment           TEXT,              -- JSON array stored as text
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

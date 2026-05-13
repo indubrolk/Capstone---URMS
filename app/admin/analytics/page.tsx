@@ -25,6 +25,16 @@ export default function AnalyticsDashboard() {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'utilization'>('overview');
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '12m'>('7d');
+    const [department, setDepartment] = useState<string>(""); // Added for department filtering
+    
+    const departments = [
+        "Faculty of Computing",
+        "Faculty of Applied Sciences",
+        "Faculty of Management",
+        "Faculty of Engineering",
+        "Faculty of Business",
+        "Faculty of Medicine"
+    ];
     
     // Overview Data
     const [overview, setOverview] = useState<any>(null);
@@ -44,6 +54,7 @@ export default function AnalyticsDashboard() {
     
     const [loading, setLoading] = useState(true);
     const [reportsLoading, setReportsLoading] = useState(false);
+    const [exporting, setExporting] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
@@ -52,12 +63,13 @@ export default function AnalyticsDashboard() {
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
+            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
 
             const [ovRes, bkRes, rsRes, mtRes] = await Promise.all([
-                fetch("http://localhost:5000/api/admin/analytics/overview", { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/bookings", { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/resources", { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/maintenance", { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/overview?${deptParam.replace('&', '')}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/bookings?${deptParam.replace('&', '')}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/resources?${deptParam.replace('&', '')}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/maintenance?${deptParam.replace('&', '')}`, { headers })
             ]);
 
             if (!ovRes.ok || !bkRes.ok || !rsRes.ok || !mtRes.ok) throw new Error("Failed to fetch analytics data");
@@ -83,12 +95,13 @@ export default function AnalyticsDashboard() {
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
+            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
 
             const [trRes, stRes, rfRes, cfRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/booking-trends?range=${range}`, { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/booking-status", { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/resource-bookings", { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/category-bookings", { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/booking-trends?range=${range}${deptParam}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/booking-status?${deptParam.replace('&', '')}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/resource-bookings?${deptParam.replace('&', '')}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/category-bookings?${deptParam.replace('&', '')}`, { headers })
             ]);
 
             const tr = await trRes.json();
@@ -112,10 +125,11 @@ export default function AnalyticsDashboard() {
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const headers = { Authorization: `Bearer ${token}` };
+            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
 
             const [utRes, pkRes] = await Promise.all([
-                fetch(`http://localhost:5000/api/admin/analytics/resource-utilization?range=${range}`, { headers }),
-                fetch("http://localhost:5000/api/admin/analytics/peak-usage", { headers })
+                fetch(`http://localhost:5000/api/admin/analytics/resource-utilization?range=${range}${deptParam}`, { headers }),
+                fetch(`http://localhost:5000/api/admin/analytics/peak-usage?${deptParam.replace('&', '')}`, { headers })
             ]);
 
             const ut = await utRes.json();
@@ -130,16 +144,44 @@ export default function AnalyticsDashboard() {
         }
     };
 
+    const handleExport = async (format: 'pdf' | 'excel', type: string) => {
+        setExporting(`${type}-${format}`);
+        try {
+            const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
+            const deptParam = department ? `&department=${encodeURIComponent(department)}` : "";
+            const response = await fetch(`http://localhost:5000/api/admin/analytics/export/${format}?type=${type}&range=${timeRange}${deptParam}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error(`Export failed with status: ${response.status}`);
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `urms-${type}-report-${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } catch (err: any) {
+            console.error("Export error:", err);
+            setError("Export failed: " + err.message);
+        } finally {
+            setExporting(null);
+        }
+    };
+
     useEffect(() => {
         if (user) fetchData();
-    }, [user]);
+    }, [user, department]);
 
     useEffect(() => {
         if (user) {
             if (activeTab === 'bookings') fetchBookingReports(timeRange);
             if (activeTab === 'utilization') fetchUtilizationReports(timeRange);
         }
-    }, [user, activeTab, timeRange]);
+    }, [user, activeTab, timeRange, department]);
 
     if (loading) {
         return (
@@ -221,25 +263,62 @@ export default function AnalyticsDashboard() {
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto max-w-full">
-                            <button 
-                                onClick={() => setActiveTab('overview')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'overview' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                Overview
-                            </button>
-                            <button 
-                                onClick={() => setActiveTab('bookings')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'bookings' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                Booking Stats
-                            </button>
-                            <button 
-                                onClick={() => setActiveTab('utilization')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'utilization' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                Resource Utilization
-                            </button>
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto max-w-full">
+                                <button 
+                                    onClick={() => setActiveTab('overview')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'overview' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                                >
+                                    Overview
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('bookings')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'bookings' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                                >
+                                    Booking Stats
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('utilization')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeTab === 'utilization' ? 'bg-[#1E3A8A] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                                >
+                                    Resource Utilization
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="relative group">
+                                    <select
+                                        value={department}
+                                        onChange={(e) => setDepartment(e.target.value)}
+                                        className="appearance-none pl-4 pr-10 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+                                    >
+                                        <option value="">All Departments</option>
+                                        {departments.map((dept) => (
+                                            <option key={dept} value={dept}>{dept}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+
+                                <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
+
+                                <button
+                                    onClick={() => handleExport('pdf', activeTab)}
+                                    disabled={!!exporting}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 font-bold text-xs rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
+                                >
+                                    <FileText className="w-4 h-4 text-red-500" />
+                                    {exporting === `${activeTab}-pdf` ? 'Generating...' : 'PDF'}
+                                </button>
+                                <button
+                                    onClick={() => handleExport('excel', activeTab)}
+                                    disabled={!!exporting}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981] text-white font-bold text-xs rounded-xl border border-emerald-600 hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50"
+                                >
+                                    <PieIcon className="w-4 h-4" />
+                                    {exporting === `${activeTab}-excel` ? 'Preparing...' : 'Excel'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

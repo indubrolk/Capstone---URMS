@@ -25,6 +25,7 @@ export interface Resource {
     capacity: string;
     location: string;
     availability_status: string;
+    department?: string;   // Added for department-wise analytics
     equipment?: string[];
     created_at?: Date;
 }
@@ -57,6 +58,7 @@ function toRow(resource: Partial<Resource>): Record<string, any> {
     if (resource.capacity           !== undefined) row.capacity           = String(resource.capacity);
     if (resource.location           !== undefined) row.location           = resource.location;
     if (resource.availability_status !== undefined) row.availability_status = resource.availability_status;
+    if (resource.department          !== undefined) row.department          = resource.department;
     if (resource.equipment          !== undefined) row.equipment          = JSON.stringify(resource.equipment);
     return row;
 }

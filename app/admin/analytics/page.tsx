@@ -10,7 +10,7 @@ import {
 import {
     LayoutDashboard, Users, Package, CalendarCheck, AlertCircle,
     CheckCircle2, Clock, BarChart3, TrendingUp, PieChart as PieIcon,
-    AlertTriangle, ArrowLeft, RefreshCcw, FileText, ChevronDown
+    AlertTriangle, ArrowLeft, RefreshCcw, FileText, ChevronDown, BellRing
 } from "lucide-react";
 import Link from "next/link";
 
@@ -352,14 +352,15 @@ export default function AnalyticsDashboard() {
                                         <FileText className="w-4 h-4 text-red-500" />
                                         {exporting === `${activeTab}-pdf` ? 'Generating...' : 'PDF'}
                                     </button>
-                                    <button
-                                        onClick={() => handleExport('excel', activeTab)}
-                                        disabled={!!exporting}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981] text-white font-bold text-xs rounded-xl border border-emerald-600 hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50"
-                                    >
-                                        <PieIcon className="w-4 h-4" />
                                         {exporting === `${activeTab}-excel` ? 'Preparing...' : 'Excel'}
                                     </button>
+                                    <Link
+                                        href="/admin/analytics/reports"
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl border border-slate-900 hover:bg-slate-800 transition-all shadow-md shadow-slate-200"
+                                    >
+                                        <BellRing className="w-4 h-4" />
+                                        Schedule Reports
+                                    </Link>
                                 </div>
                             </div>
                     </div>

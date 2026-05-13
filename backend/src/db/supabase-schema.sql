@@ -90,6 +90,21 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 2.7 REPORT SCHEDULES TABLE
+-- Tracks automated weekly report configurations
+CREATE TABLE IF NOT EXISTS report_schedules (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_types TEXT[] NOT NULL,          -- ['booking', 'usage', 'maintenance', 'overview']
+    recipients   TEXT[] NOT NULL,          -- Array of emails or user IDs
+    delivery_day INTEGER NOT NULL DEFAULT 1, -- 0=Sunday, 1=Monday, etc.
+    delivery_time TIME NOT NULL DEFAULT '09:00:00',
+    format       TEXT NOT NULL DEFAULT 'pdf', -- 'pdf', 'excel'
+    is_enabled   BOOLEAN DEFAULT TRUE,
+    last_run_at  TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 3. INDEXES (Optimized for Analytics & Search)
 CREATE INDEX IF NOT EXISTS idx_users_department ON users(department);
 CREATE INDEX IF NOT EXISTS idx_resources_department ON resources(department);

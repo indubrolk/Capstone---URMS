@@ -29,11 +29,13 @@ import resourceRoutes from "./routes/resourceRoutes";
 import maintenanceTicketRoutes from "./routes/maintenanceTicketRoutes";
 import userRoutes from "./routes/userRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
+import reportScheduleRoutes from "./routes/reportScheduleRoutes";
 
 app.use("/api/resources", resourceRoutes);
 app.use("/api/maintenance-tickets", maintenanceTicketRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin/analytics", analyticsRoutes);
+app.use("/api/admin/reports", reportScheduleRoutes);
 
 import { checkSupabaseConnection } from "./config/supabaseClient";
 

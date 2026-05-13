@@ -1,18 +1,38 @@
 import { Request, Response, NextFunction } from 'express';
 import admin, { isFirebaseInitialized } from '../config/firebase.config';
+import { getSupabaseClient, supabase } from '../config/supabaseClient';
 
 export interface AuthRequest extends Request {
     user?: any;
+    supabase?: any;
 }
 
 export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
     const header = req.headers.authorization as string;
 
+    const finalize = () => {
+        // Create scoped supabase client for this request
+        if (req.user) {
+            const role = req.user.role || (req.user.admin ? 'admin' : 'student');
+            
+            // For admins, use the service role client to bypass RLS for administrative/analytics tasks
+            if (role === 'admin' || req.user.admin) {
+                req.supabase = supabase;
+            } else {
+                req.supabase = getSupabaseClient({
+                    uid: req.user.uid,
+                    role: role
+                });
+            }
+        }
+        next();
+    };
+
     if (!header || !header.startsWith('Bearer ')) {
         if (!isFirebaseInitialized && process.env.NODE_ENV === 'development') {
             console.warn('Auth bypassed in DEV mode because Firebase is not initialized.');
             req.user = { uid: 'dev-user', role: 'admin' } as any;
-            return next();
+            return finalize();
         }
         return res.status(401).json({ message: 'Unauthorized: No token' });
     }
@@ -22,18 +42,18 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     // Allow dev-token bypass in development
     if (token === 'dev-token') {
         req.user = { uid: 'dev-user', role: 'admin', admin: true };
-        return next();
+        return finalize();
     }
 
     try {
         const decoded = await admin.auth().verifyIdToken(token);
         req.user = decoded;
-        next();
+        finalize();
     } catch (error) {
         if (!isFirebaseInitialized && process.env.NODE_ENV === 'development') {
             console.warn('Auth bypassed in DEV mode because Firebase is not initialized.');
             req.user = { uid: 'dev-user', role: 'admin' } as any;
-            return next();
+            return finalize();
         }
         return res.status(401).json({ message: 'Unauthorized: Invalid token' });
     }

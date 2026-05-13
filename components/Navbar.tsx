@@ -123,7 +123,7 @@ export default function Navbar() {
                                 {/* glow ring on hover */}
                                 <span className="absolute inset-0 rounded-xl scale-0 group-hover:scale-110 bg-brand-primary/10 transition-transform duration-300 ease-out" />
                                 <img
-                                    src="/logo.png"
+                                    src="/urms-logo.png"
                                     alt="URMS Logo"
                                     className="relative w-8 h-8 rounded-xl object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm"
                                 />

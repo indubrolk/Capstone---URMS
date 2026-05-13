@@ -48,7 +48,7 @@ export default function ResourcesPage() {
     const fetchResources = async () => {
         setLoading(true);
         try {
-            const token = user ? await user.getIdToken() : "dev-token";
+            const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const res = await fetch("http://localhost:5000/api/resources", {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -70,7 +70,7 @@ export default function ResourcesPage() {
         if (!window.confirm("Are you sure you want to delete this resource?")) return;
         setDeletingId(id);
         try {
-            const token = user ? await user.getIdToken() : "dev-token";
+            const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const res = await fetch(`http://localhost:5000/api/resources/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },

@@ -7,13 +7,14 @@
  * are unchanged from the MySQL version.
  * ─────────────────────────────────────────────────────────────
  */
-import { Request, Response } from "express";
+import { Response } from "express";
 import { ResourceModel } from "../models/resource.model";
+import { AuthRequest } from "../middleware/auth.middleware";
 
 // ── GET /api/resources ─────────────────────────────────────
-export const getResources = async (req: Request, res: Response): Promise<void> => {
+export const getResources = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const resources = await ResourceModel.findAll();
+    const resources = await ResourceModel.findAll(req.supabase);
     res.json({ data: resources });
   } catch (error: any) {
     console.error("Error fetching resources:", error);
@@ -22,7 +23,7 @@ export const getResources = async (req: Request, res: Response): Promise<void> =
 };
 
 // ── POST /api/resources ────────────────────────────────────
-export const addResource = async (req: Request, res: Response): Promise<void> => {
+export const addResource = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, type, capacity, location, availability_status, equipment } = req.body;
 
@@ -33,7 +34,7 @@ export const addResource = async (req: Request, res: Response): Promise<void> =>
       location,
       availability_status,
       equipment: equipment || []
-    });
+    }, req.supabase);
 
     res.json({ message: "Resource added", id: newId });
   } catch (error: any) {
@@ -43,7 +44,7 @@ export const addResource = async (req: Request, res: Response): Promise<void> =>
 };
 
 // ── PATCH /api/resources/:id ───────────────────────────────
-export const updateResource = async (req: Request, res: Response): Promise<void> => {
+export const updateResource = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
     const { name, type, capacity, location, availability_status, equipment } = req.body;
@@ -55,7 +56,7 @@ export const updateResource = async (req: Request, res: Response): Promise<void>
       location,
       availability_status,
       equipment: equipment || []
-    });
+    }, req.supabase);
 
     if (!success) {
       res.status(404).json({ status: "error", message: "Resource not found" });
@@ -70,11 +71,11 @@ export const updateResource = async (req: Request, res: Response): Promise<void>
 };
 
 // ── DELETE /api/resources/:id ──────────────────────────────
-export const deleteResource = async (req: Request, res: Response): Promise<void> => {
+export const deleteResource = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
 
-    const success = await ResourceModel.delete(id);
+    const success = await ResourceModel.delete(id, req.supabase);
 
     if (!success) {
       res.status(404).json({ status: "error", message: "Resource not found" });
@@ -89,7 +90,7 @@ export const deleteResource = async (req: Request, res: Response): Promise<void>
 };
 
 // ── POST /api/resources/import  (Bulk Import) ─────────────
-export const importResources = async (req: Request, res: Response): Promise<void> => {
+export const importResources = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { resources } = req.body;
 
@@ -108,7 +109,7 @@ export const importResources = async (req: Request, res: Response): Promise<void
         location:            r.location,
         availability_status: r.availability_status || "Available",
         equipment:           r.equipment          || []
-      });
+      }, req.supabase);
       insertedIds.push(id);
     }
 

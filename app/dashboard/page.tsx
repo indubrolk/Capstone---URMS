@@ -65,6 +65,7 @@ function AdminDashboard({ profile }: { profile: any }) {
                         <ActionButton href="/resources" label="Edit Resources" />
                         <ActionButton href="/maintenance" label="View Tickets" />
                         <ActionButton href="/bookings" label="All Bookings" />
+                        <ActionButton href="/admin/analytics" label="View Analytics" />
                     </div>
                 </div>
             </div>

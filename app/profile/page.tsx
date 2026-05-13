@@ -71,7 +71,7 @@ export default function ProfilePage() {
         if (!user) return;
         const fetchProfile = async () => {
             try {
-                const token = await user.getIdToken();
+                const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
                 const res = await fetch("http://localhost:5000/api/users/profile", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -96,7 +96,7 @@ export default function ProfilePage() {
         setSuccess(null);
         setSaveLoading(true);
         try {
-            const token = await user.getIdToken();
+            const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const res = await fetch("http://localhost:5000/api/users/profile", {
                 method: "PUT",
                 headers: {

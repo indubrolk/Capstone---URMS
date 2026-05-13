@@ -57,6 +57,7 @@ export default function AnalyticsDashboard() {
     const [loading, setLoading] = useState(true);
     const [reportsLoading, setReportsLoading] = useState(false);
     const [exporting, setExporting] = useState<string | null>(null);
+    const [googleSheetUrl, setGoogleSheetUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
@@ -157,7 +158,7 @@ export default function AnalyticsDashboard() {
         }
     };
 
-    const handleExport = async (format: 'pdf' | 'excel', type: string) => {
+    const handleExport = async (format: 'pdf' | 'excel' | 'sheets', type: string) => {
         setExporting(`${type}-${format}`);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
@@ -172,16 +173,23 @@ export default function AnalyticsDashboard() {
             });
             
             if (!response.ok) throw new Error(`Export failed with status: ${response.status}`);
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `urms-${type}-report-${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
+            
+            if (format === 'sheets') {
+                const result = await response.json();
+                setGoogleSheetUrl(result.data.spreadsheetUrl);
+                // Open in new tab automatically
+                window.open(result.data.spreadsheetUrl, '_blank');
+            } else {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `urms-${type}-report-${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            }
         } catch (err: any) {
             console.error("Export error:", err);
             setError("Export failed: " + err.message);
@@ -352,7 +360,21 @@ export default function AnalyticsDashboard() {
                                         <FileText className="w-4 h-4 text-red-500" />
                                         {exporting === `${activeTab}-pdf` ? 'Generating...' : 'PDF'}
                                     </button>
+                                    <button
+                                        onClick={() => handleExport('excel', activeTab)}
+                                        disabled={!!exporting}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-[#10B981] text-white font-bold text-xs rounded-xl border border-emerald-600 hover:bg-emerald-600 transition-all shadow-md shadow-emerald-200 disabled:opacity-50"
+                                    >
+                                        <PieIcon className="w-4 h-4" />
                                         {exporting === `${activeTab}-excel` ? 'Preparing...' : 'Excel'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleExport('sheets', activeTab)}
+                                        disabled={!!exporting}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-white text-[#1E3A8A] font-bold text-xs rounded-xl border border-blue-200 hover:bg-blue-50 transition-all shadow-sm disabled:opacity-50"
+                                    >
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_logo_%282014-2020%29.svg" className="w-4 h-4" alt="Sheets" />
+                                        {exporting === `${activeTab}-sheets` ? 'Syncing...' : 'Sheets'}
                                     </button>
                                     <Link
                                         href="/admin/analytics/reports"
@@ -364,6 +386,26 @@ export default function AnalyticsDashboard() {
                                 </div>
                             </div>
                     </div>
+
+                    {googleSheetUrl && (
+                        <div className="mb-8 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl flex items-center justify-between gap-3 animate-in slide-in-from-top duration-500">
+                            <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-5 h-5" />
+                                <div>
+                                    <p className="font-bold">Report Exported Successfully!</p>
+                                    <p className="text-sm opacity-90">Your data has been synced to Google Sheets.</p>
+                                </div>
+                            </div>
+                            <a 
+                                href={googleSheetUrl} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all"
+                            >
+                                Open Sheet
+                            </a>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="mb-8 p-4 bg-red-100 border border-red-200 text-red-700 rounded-2xl flex items-center gap-3">

@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { generatePDFReport, generateExcelReport } from "../services/exportService";
+import { exportToGoogleSheets } from "../services/googleSheetsService";
 
 import { 
     getOverviewData, 
@@ -813,6 +814,110 @@ export const exportAnalyticsExcel = async (req: AuthRequest, res: Response) => {
         }
     } catch (error: any) {
         console.error("Excel Export Error:", error);
+        res.status(500).json({ status: "error", message: error.message });
+    }
+};
+
+/**
+ * GET /api/admin/analytics/export/google-sheets
+ */
+export const exportAnalyticsSheets = async (req: AuthRequest, res: Response) => {
+    try {
+        const type = (req.query.type as string) || 'overview';
+        const startDate = req.query.startDate as string;
+        const endDate = req.query.endDate as string;
+        const range = (req.query.range as string) || '7d';
+        const supabase = req.supabase;
+        const now = new Date().toISOString();
+        const department = req.query.department as string;
+        const userEmail = req.user?.email;
+
+        const dateLabel = startDate && endDate 
+            ? `${startDate} to ${endDate}` 
+            : `Range: ${range}`;
+
+        let exportData: any[] = [];
+        let title = "URMS Analytics Report";
+
+        if (type === 'overview') {
+            title = "URMS System Overview";
+            const data = await getOverviewData(supabase, { department, startDate, endDate });
+            exportData = [{
+                name: 'Summary',
+                headers: ['Metric', 'Value'],
+                rows: [
+                    ['Total Resources', data.totalResources],
+                    ['Active Bookings', data.activeBookings],
+                    ['Completed Bookings', data.completedBookings],
+                    ['Pending Maintenance', data.pendingMaintenanceTasks],
+                    ['Utilization Rate', `${data.resourceUtilization}%`],
+                    ['Most Booked Resource', data.mostBookedResource],
+                    ['Department Filter', department || 'All'],
+                    ['Period', dateLabel],
+                    ['Generated At', new Date().toLocaleString()]
+                ]
+            }];
+        } else if (type === 'bookings') {
+            title = "URMS Booking Statistics";
+            const data = await getBookingData(supabase, { department, startDate, endDate });
+            
+            exportData = [
+                {
+                    name: 'Status Distribution',
+                    headers: ['Status', 'Total'],
+                    rows: Object.entries(data.statusDistribution)
+                },
+                {
+                    name: 'Daily Trends',
+                    headers: ['Date', 'Booking Count'],
+                    rows: data.trends.map(t => [t.date, t.count])
+                }
+            ];
+        } else if (type === 'utilization') {
+            title = "Resource Utilization Report";
+            // Reuse logic from PDF/Excel
+            let resQuery = supabase.from('resources').select('id, name, type');
+            resQuery = applyDeptFilter(resQuery, department);
+            const { data: resources } = await resQuery;
+
+            let bkQuery = supabase.from('bookings').select('resource_id, start_time, end_time, resources!inner(department)').in('status', ['Approved', 'Completed']);
+            bkQuery = applyDeptFilter(bkQuery, department, 'resources');
+            bkQuery = applyDateRangeFilter(bkQuery, startDate, endDate, 'start_time');
+            const { data: bookings } = await bkQuery;
+            
+            const utilizationMap: Record<string, any> = {};
+            resources?.forEach((r: any) => {
+                utilizationMap[r.id] = { name: r.name, type: r.type, bookings: 0, hours: 0 };
+            });
+
+            bookings?.forEach((b: any) => {
+                if (utilizationMap[b.resource_id]) {
+                    const start = new Date(b.start_time);
+                    const end = new Date(b.end_time);
+                    utilizationMap[b.resource_id].bookings++;
+                    utilizationMap[b.resource_id].hours += Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+                }
+            });
+
+            const rows = Object.values(utilizationMap).map((item: any) => [
+                item.name,
+                item.type,
+                item.bookings,
+                Math.round(item.hours * 10) / 10
+            ]).sort((a: any, b: any) => b[2] - a[2]);
+
+            exportData = [{
+                name: 'Utilization',
+                headers: ['Resource', 'Category', 'Total Bookings', 'Hours Used'],
+                rows
+            }];
+        }
+
+        const result = await exportToGoogleSheets(title, exportData, userEmail);
+        res.json({ status: "success", data: result });
+
+    } catch (error: any) {
+        console.error("Google Sheets Export Error:", error);
         res.status(500).json({ status: "error", message: error.message });
     }
 };

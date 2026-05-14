@@ -53,6 +53,11 @@ export default function ForgotPasswordPage() {
             return;
         }
 
+        if (!auth) {
+            setError("Authentication service is not available. Please try again later.");
+            return;
+        }
+
         setLoading(true);
         try {
             await sendPasswordResetEmail(auth, email);

@@ -44,13 +44,15 @@ if (!supabaseAnonKey || supabaseAnonKey.includes('your-supabase-anon-key')) {
     );
 }
 
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 /**
  * Singleton Supabase client.
- * Uses the anon key — pair with RLS policies for production.
+ * Uses the service role key to bypass RLS for backend operations.
  */
 export const supabase: SupabaseClient = createClient(
     supabaseUrl  || '',
-    supabaseAnonKey || ''
+    supabaseServiceKey || supabaseAnonKey || ''
 );
 
 /**

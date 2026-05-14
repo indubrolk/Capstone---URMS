@@ -29,6 +29,7 @@ import globalSupabase from '../config/supabaseClient';
 export interface MaintenanceTicket {
     id?: string;           // uuid (was number)
     resourceId: string;    // maps to resource_id column
+    resourceName?: string; // joined from resources table
     title: string;
     description: string;
     priority: 'Low' | 'Medium' | 'High';
@@ -53,6 +54,7 @@ function fromRow(row: any): MaintenanceTicket {
     return {
         id:           row.id,
         resourceId:   row.resource_id,
+        resourceName: row.resources?.name || 'Unknown Resource',
         title:        row.title,
         description:  row.description,
         priority:     row.priority,
@@ -86,7 +88,12 @@ export class MaintenanceTicketModel {
     // ── findAll ─────────────────────────────────────────────
     static async findAll(filters: any = {}, client: SupabaseClient = globalSupabase): Promise<MaintenanceTicket[]> {
         try {
-            let query = client.from('maintenance_tickets').select('*');
+            let query = client.from('maintenance_tickets').select(`
+                *,
+                resources:resource_id (
+                    name
+                )
+            `);
 
             if (filters.status)     query = query.eq('status',      filters.status) as any;
             if (filters.priority)   query = query.eq('priority',    filters.priority) as any;
@@ -127,7 +134,12 @@ export class MaintenanceTicketModel {
         try {
             const { data, error } = await client
                 .from('maintenance_tickets')
-                .select('*')
+                .select(`
+                    *,
+                    resources:resource_id (
+                        name
+                    )
+                `)
                 .eq('id', String(id))
                 .maybeSingle();
 

@@ -22,10 +22,20 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. server-to-server, curl)
     if (!origin) return callback(null, true);
+    
+    // In development, allow localhost and 127.0.0.1 on any port
+    if (process.env.NODE_ENV !== 'production') {
+      if (origin.match(/^http:\/\/localhost(:\d+)?$/) || origin.match(/^http:\/\/127\.0\.0\.1(:\d+)?$/)) {
+        return callback(null, true);
+      }
+    }
+
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-urms-user-id', 'x-urms-user-role']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

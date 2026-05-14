@@ -29,8 +29,8 @@ function Orb({ className }: { className: string }) {
 
 export default function AnalyticsDashboard() {
     const { user } = useAuth();
-    const { theme } = useTheme();
-    const isDark = theme === "dark";
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
     
     const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'utilization'>('overview');
     // ... rest of the component state ...

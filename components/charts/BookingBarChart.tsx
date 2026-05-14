@@ -5,6 +5,8 @@ import { Bar } from 'react-chartjs-2';
 import './ChartConfig';
 import { ChartOptions, ChartData } from 'chart.js';
 
+import { useTheme } from 'next-themes';
+
 interface BarChartProps {
   data: ChartData<'bar'>;
   title?: string;
@@ -12,6 +14,9 @@ interface BarChartProps {
 }
 
 export const BookingBarChart: React.FC<BarChartProps> = ({ data, title, horizontal = false }) => {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const options: ChartOptions<'bar'> = {
     indexAxis: horizontal ? 'y' as const : 'x' as const,
     responsive: true,
@@ -23,10 +28,15 @@ export const BookingBarChart: React.FC<BarChartProps> = ({ data, title, horizont
       title: {
         display: !!title,
         text: title,
+        color: isDark ? '#F8FAF6' : '#020617',
         font: { size: 16, weight: 'bold' as any }
       },
       tooltip: {
-        backgroundColor: 'rgba(30, 58, 138, 0.9)',
+        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+        titleColor: isDark ? '#F8FAF6' : '#020617',
+        bodyColor: isDark ? '#94A3B8' : '#64748B',
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        borderWidth: 1,
         padding: 12,
         cornerRadius: 12
       }
@@ -36,13 +46,19 @@ export const BookingBarChart: React.FC<BarChartProps> = ({ data, title, horizont
         beginAtZero: true,
         grid: {
           display: !horizontal,
-          color: 'rgba(226, 232, 240, 0.5)'
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+        },
+        ticks: {
+          color: isDark ? '#94A3B8' : '#64748B',
         }
       },
       x: {
         grid: {
           display: horizontal,
-          color: 'rgba(226, 232, 240, 0.5)'
+          color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+        },
+        ticks: {
+          color: isDark ? '#94A3B8' : '#64748B',
         }
       }
     }

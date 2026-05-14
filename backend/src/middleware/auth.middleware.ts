@@ -48,6 +48,24 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     try {
         const decoded = await admin.auth().verifyIdToken(token);
         req.user = decoded;
+
+        // If role/admin claims are missing from the token, fetch from Supabase to ensure consistency
+        if (!req.user.role && !req.user.admin) {
+            try {
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('role')
+                    .eq('id', req.user.uid)
+                    .single();
+                
+                if (profile) {
+                    req.user.role = profile.role;
+                }
+            } catch (err) {
+                console.error('Error fetching role from Supabase in middleware:', err);
+            }
+        }
+
         finalize();
     } catch (error) {
         if (!isFirebaseInitialized && process.env.NODE_ENV === 'development') {

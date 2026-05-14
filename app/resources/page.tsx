@@ -138,27 +138,27 @@ export default function ResourcesPage() {
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />;
         return sortDir === "asc"
-            ? <ChevronUp className="w-3.5 h-3.5 text-[#1E3A8A]" />
-            : <ChevronDown className="w-3.5 h-3.5 text-[#1E3A8A]" />;
+            ? <ChevronUp className="w-3.5 h-3.5 text-brand-primary" />
+            : <ChevronDown className="w-3.5 h-3.5 text-brand-primary" />;
     };
 
     return (
         <ProtectedRoute>
             {/* Dashboard wrapper */}
-            <div className="min-h-screen bg-[#F0F4FF]">
+            <div className="min-h-screen bg-background">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
 
                     {/* ── Page Header ── */}
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                         <div>
-                            <h1 className="text-3xl font-bold text-[#1E3A8A] tracking-tight">Resources</h1>
-                            <p className="text-slate-500 mt-1 text-sm">Manage university resources, labs, and halls</p>
+                            <h1 className="text-3xl font-black text-foreground tracking-tight">Resources</h1>
+                            <p className="text-slate-600 dark:text-foreground/50 mt-1 text-sm font-medium">Manage university resources, labs, and halls</p>
                         </div>
                         {isAdmin && (
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsBulkImportOpen(true)}
-                                    className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 active:scale-95 text-slate-700 font-semibold px-5 py-2.5 rounded-xl shadow-sm transition-all duration-200"
+                                    className="inline-flex items-center gap-2 bg-card border border-slate-200 dark:border-border hover:bg-slate-100 dark:bg-foreground/5 active:scale-95 text-slate-700 dark:text-foreground/80 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all duration-200"
                                 >
                                     <UploadCloud className="w-4 h-4" />
                                     Bulk Import
@@ -166,7 +166,7 @@ export default function ResourcesPage() {
                                 <button
                                     id="add-resource-btn"
                                     onClick={() => setIsAddModalOpen(true)}
-                                    className="inline-flex items-center gap-2 bg-[#1E3A8A] hover:bg-[#1e40af] active:scale-95 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-blue-900/20 transition-all duration-200"
+                                    className="inline-flex items-center gap-2 bg-brand-primary hover:opacity-90 active:scale-95 text-white font-bold px-5 py-2.5 rounded-xl shadow-md shadow-brand-primary/20 transition-all duration-200"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Add Resource
@@ -178,78 +178,78 @@ export default function ResourcesPage() {
                     {/* ── Stats Cards ── */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
                         {/* Total */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                                <Database className="w-6 h-6 text-[#1E3A8A]" />
+                        <div className="bg-card rounded-2xl shadow-sm border border-slate-200 dark:border-border p-6 flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center shrink-0">
+                                <Database className="w-6 h-6 text-brand-primary" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Resources</p>
-                                <p className="text-3xl font-bold text-slate-900 mt-0.5">
-                                    {loading ? <span className="text-xl text-slate-300">—</span> : totalResources}
+                                <p className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">Total Resources</p>
+                                <p className="text-3xl font-black text-foreground mt-0.5">
+                                    {loading ? <span className="text-xl text-slate-400 dark:text-foreground/20">—</span> : totalResources}
                                 </p>
                             </div>
                         </div>
 
                         {/* Available */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                        <div className="bg-card rounded-2xl shadow-sm border border-slate-200 dark:border-border p-6 flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Available</p>
-                                <p className="text-3xl font-bold text-emerald-600 mt-0.5">
-                                    {loading ? <span className="text-xl text-slate-300">—</span> : available}
+                                <p className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">Available</p>
+                                <p className="text-3xl font-black text-emerald-500 mt-0.5">
+                                    {loading ? <span className="text-xl text-slate-400 dark:text-foreground/20">—</span> : available}
                                 </p>
                             </div>
                         </div>
 
                         {/* Booked */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                        <div className="bg-card rounded-2xl shadow-sm border border-slate-200 dark:border-border p-6 flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
                                 <XCircle className="w-6 h-6 text-red-500" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Booked</p>
-                                <p className="text-3xl font-bold text-red-500 mt-0.5">
-                                    {loading ? <span className="text-xl text-slate-300">—</span> : booked}
+                                <p className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">Booked</p>
+                                <p className="text-3xl font-black text-red-500 mt-0.5">
+                                    {loading ? <span className="text-xl text-slate-400 dark:text-foreground/20">—</span> : booked}
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     {/* ── Search & Filters ── */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6 flex flex-col sm:flex-row gap-3">
+                    <div className="bg-card rounded-2xl shadow-sm border border-slate-200 dark:border-border p-4 mb-6 flex flex-col sm:flex-row gap-3 backdrop-blur-md">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-foreground/40" />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search resources…"
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-xl text-sm font-bold text-foreground placeholder-slate-400 dark:placeholder-foreground/30 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
                             />
                         </div>
                         <select
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
+                            className="px-4 py-2.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-xl text-sm font-bold text-slate-700 dark:text-foreground/80 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all appearance-none cursor-pointer"
                         >
-                            <option value="All">All Categories</option>
-                            <option value="Lecture Halls">Lecture Halls</option>
-                            <option value="Labs">Labs</option>
-                            <option value="Rooms">Rooms</option>
-                            <option value="Equipment">Equipment</option>
-                            <option value="Vehicles">Vehicles</option>
+                            <option value="All" className="bg-background">All Categories</option>
+                            <option value="Lecture Halls" className="bg-background">Lecture Halls</option>
+                            <option value="Labs" className="bg-background">Labs</option>
+                            <option value="Rooms" className="bg-background">Rooms</option>
+                            <option value="Equipment" className="bg-background">Equipment</option>
+                            <option value="Vehicles" className="bg-background">Vehicles</option>
                         </select>
                         <select
                             value={selectedStatus}
                             onChange={(e) => setSelectedStatus(e.target.value)}
-                            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
+                            className="px-4 py-2.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-xl text-sm font-bold text-slate-700 dark:text-foreground/80 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all appearance-none cursor-pointer"
                         >
-                            <option value="All">All Statuses</option>
-                            <option value="Available">Available</option>
-                            <option value="Booked">Booked</option>
-                            <option value="Maintenance">Maintenance</option>
+                            <option value="All" className="bg-background">All Statuses</option>
+                            <option value="Available" className="bg-background">Available</option>
+                            <option value="Booked" className="bg-background">Booked</option>
+                            <option value="Maintenance" className="bg-background">Maintenance</option>
                         </select>
                     </div>
 
@@ -262,10 +262,10 @@ export default function ResourcesPage() {
                     )}
 
                     {/* ── Table ── */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="bg-card rounded-2xl shadow-sm border border-slate-200 dark:border-border overflow-hidden">
                         {loading ? (
                             <div className="flex items-center justify-center py-24">
-                                <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-slate-200 border-t-[#1E3A8A]" />
+                                <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-slate-200 dark:border-border border-t-brand-primary" />
                             </div>
                         ) : filteredResources.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-24 text-center px-6">
@@ -279,7 +279,7 @@ export default function ResourcesPage() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b border-slate-100 bg-slate-50/60">
+                                        <tr className="border-b border-slate-200 dark:border-border bg-foreground/[0.02]">
                                             {(
                                                 [
                                                     { label: "Name", field: "name" },
@@ -290,7 +290,7 @@ export default function ResourcesPage() {
                                             ).map(({ label, field }) => (
                                                 <th
                                                     key={field}
-                                                    className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer select-none hover:text-[#1E3A8A] transition-colors"
+                                                    className="px-6 py-4 text-left text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest cursor-pointer select-none hover:text-brand-primary transition-colors"
                                                     onClick={() => handleSort(field)}
                                                 >
                                                     <span className="inline-flex items-center gap-1.5">
@@ -300,23 +300,23 @@ export default function ResourcesPage() {
                                                 </th>
                                             ))}
                                             {isAdmin && (
-                                                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">
                                                     Actions
                                                 </th>
                                             )}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-50">
+                                    <tbody className="divide-y divide-border/50">
                                         {filteredResources.map((resource) => (
                                             <tr
                                                 key={resource.id}
-                                                className="hover:bg-blue-50/40 transition-colors duration-150 group"
+                                                className="hover:bg-foreground/[0.02] transition-colors duration-150 group"
                                             >
                                                 {/* Name */}
                                                 <td className="px-6 py-4">
-                                                    <span className="font-semibold text-slate-800">{resource.name}</span>
+                                                    <span className="font-bold text-foreground">{resource.name}</span>
                                                     {resource.location && (
-                                                        <p className="text-xs text-slate-400 mt-0.5">{resource.location}</p>
+                                                        <p className="text-[10px] font-bold text-slate-500 dark:text-foreground/40 mt-0.5">{resource.location}</p>
                                                     )}
                                                 </td>
 
@@ -329,7 +329,7 @@ export default function ResourcesPage() {
                                                 </td>
 
                                                 {/* Capacity */}
-                                                <td className="px-6 py-4 text-slate-700 font-medium">
+                                                <td className="px-6 py-4 text-slate-700 dark:text-foreground/80 font-bold">
                                                     {resource.capacity}
                                                 </td>
 
@@ -364,7 +364,7 @@ export default function ResourcesPage() {
                                                             <button
                                                                 onClick={() => setEditingResource(resource)}
                                                                 title="Edit"
-                                                                className="p-2 rounded-lg text-slate-400 hover:text-[#1E3A8A] hover:bg-blue-50 transition-all duration-150"
+                                                                className="p-2 rounded-lg text-slate-500 dark:text-foreground/40 hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-150"
                                                             >
                                                                 <Edit3 className="w-4 h-4" />
                                                             </button>
@@ -372,7 +372,7 @@ export default function ResourcesPage() {
                                                                 onClick={() => handleDelete(resource.id)}
                                                                 title="Delete"
                                                                 disabled={deletingId === resource.id}
-                                                                className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-150 disabled:opacity-40"
+                                                                className="p-2 rounded-lg text-slate-500 dark:text-foreground/40 hover:text-red-500 hover:bg-red-500/5 transition-all duration-150 disabled:opacity-40"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>
@@ -385,10 +385,10 @@ export default function ResourcesPage() {
                                 </table>
 
                                 {/* Table footer */}
-                                <div className="border-t border-slate-100 px-6 py-3 flex items-center justify-between bg-slate-50/40">
-                                    <p className="text-xs text-slate-400">
-                                        Showing <span className="font-semibold text-slate-600">{filteredResources.length}</span> of{" "}
-                                        <span className="font-semibold text-slate-600">{totalResources}</span> resources
+                                <div className="border-t border-slate-200 dark:border-border px-6 py-3 flex items-center justify-between bg-foreground/[0.02]">
+                                    <p className="text-[10px] font-bold text-slate-500 dark:text-foreground/40 uppercase tracking-widest">
+                                        Showing <span className="font-black text-slate-700 dark:text-foreground/70">{filteredResources.length}</span> of{" "}
+                                        <span className="font-black text-slate-700 dark:text-foreground/70">{totalResources}</span> resources
                                     </p>
                                 </div>
                             </div>

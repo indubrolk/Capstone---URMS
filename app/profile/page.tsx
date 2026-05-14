@@ -42,14 +42,14 @@ function Orb({ className }: { className: string }) {
 /* ── static info card ──────────────────────────────────────── */
 function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
     return (
-        <div className="group relative overflow-hidden bg-white/5 border border-white/10 hover:border-white/20 rounded-2xl p-5 transition-all duration-200 hover:bg-white/8">
+        <div className="group relative overflow-hidden bg-foreground/[0.03] border border-slate-200 dark:border-border hover:border-brand-primary/50 rounded-2xl p-5 transition-all duration-200 hover:bg-foreground/[0.05]">
             <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-400">
+                <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shrink-0 text-brand-primary">
                     {icon}
                 </div>
                 <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">{label}</p>
-                    <p className="text-sm font-bold text-white truncate">{value}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-1">{label}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{value}</p>
                 </div>
             </div>
         </div>
@@ -129,16 +129,16 @@ export default function ProfilePage() {
 
     return (
         <ProtectedRoute>
-            <div className="min-h-[calc(100vh-64px)] bg-[#080E1E] relative overflow-hidden">
+            <div className="min-h-[calc(100vh-64px)] bg-background relative overflow-hidden">
                 {/* background orbs */}
-                <Orb className="w-96 h-96 bg-blue-600/15 -top-20 -right-20 animate-pulse" />
-                <Orb className="w-72 h-72 bg-indigo-600/10 bottom-10 -left-20 animate-pulse" />
+                <Orb className="w-96 h-96 bg-brand-primary/10 -top-20 -right-20 animate-pulse" />
+                <Orb className="w-72 h-72 bg-indigo-500/5 bottom-10 -left-20 animate-pulse" />
 
                 {/* subtle grid */}
                 <div
-                    className="absolute inset-0 opacity-[0.025]"
+                    className="absolute inset-0 opacity-[0.015]"
                     style={{
-                        backgroundImage: "linear-gradient(rgba(255,255,255,0.4) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.4) 1px,transparent 1px)",
+                        backgroundImage: "linear-gradient(currentColor 1px,transparent 1px),linear-gradient(90deg,currentColor 1px,transparent 1px)",
                         backgroundSize: "40px 40px",
                     }}
                 />
@@ -147,32 +147,32 @@ export default function ProfilePage() {
 
                     {/* ── PAGE HEADING ── */}
                     <div className="mb-10">
-                        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1 mb-4">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                            <span className="text-blue-300 text-xs font-semibold">Account Settings</span>
+                        <div className="inline-flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/20 rounded-full px-3 py-1 mb-4">
+                            <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                            <span className="text-brand-primary text-[10px] font-black uppercase tracking-widest">Account Settings</span>
                         </div>
-                        <h1 className="text-3xl font-black text-white tracking-tight">My Profile</h1>
-                        <p className="text-slate-500 font-medium mt-1">Manage your personal information and account settings.</p>
+                        <h1 className="text-3xl font-black text-foreground tracking-tight">My Profile</h1>
+                        <p className="text-slate-600 dark:text-foreground/50 font-medium mt-1">Manage your personal information and account settings.</p>
                     </div>
 
                     {/* ── LOADING ── */}
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-32 gap-4">
-                            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                            <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center">
+                                <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
                             </div>
-                            <p className="text-slate-500 font-medium text-sm">Loading your profile…</p>
+                            <p className="text-slate-500 dark:text-foreground/40 font-black text-[10px] uppercase tracking-widest">Loading your profile…</p>
                         </div>
 
                     ) : profile ? (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                             {/* ── PROFILE HERO CARD ── */}
-                            <div className="relative overflow-hidden bg-gradient-to-br from-[#0D1428] to-[#0a1530] border border-white/10 rounded-3xl">
+                            <div className="relative overflow-hidden bg-card border border-slate-200 dark:border-border rounded-3xl">
                                 {/* decorative top strip */}
-                                <div className="h-28 bg-gradient-to-r from-blue-600/30 via-indigo-600/20 to-blue-600/10 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20" />
-                                    <Orb className="w-40 h-40 bg-blue-500/30 -top-10 right-10 animate-none" />
+                                <div className="h-28 bg-gradient-to-r from-brand-primary/20 via-indigo-500/10 to-brand-primary/5 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20 text-foreground" />
+                                    <Orb className="w-40 h-40 bg-brand-primary/20 -top-10 right-10 animate-none" />
                                 </div>
 
                                 {/* avatar + name row */}
@@ -181,11 +181,11 @@ export default function ProfilePage() {
                                         <div className="flex items-end gap-5">
                                             {/* avatar */}
                                             <div className="relative shrink-0">
-                                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-2xl font-black shadow-2xl shadow-blue-500/40 border-4 border-[#0D1428]">
+                                                <div className="w-20 h-20 rounded-2xl bg-brand-primary flex items-center justify-center text-white text-2xl font-black shadow-2xl shadow-brand-primary/40 border-4 border-card">
                                                     {initials}
                                                 </div>
                                                 {/* online dot */}
-                                                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-[#0D1428] shadow-lg shadow-emerald-400/50" />
+                                                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-card shadow-lg shadow-emerald-500/50" />
                                             </div>
 
                                             <div className="pb-1">
@@ -204,7 +204,7 @@ export default function ProfilePage() {
                                         {!isEditing && (
                                             <button
                                                 onClick={() => setIsEditing(true)}
-                                                className="flex items-center gap-2 px-5 py-2.5 bg-white/8 hover:bg-white/15 border border-white/15 hover:border-white/25 text-white text-sm font-bold rounded-xl transition-all duration-200 active:scale-95"
+                                                className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 border border-slate-200 dark:border-border hover:border-brand-primary/50 text-foreground text-sm font-black rounded-xl transition-all duration-200 active:scale-95"
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                                 Edit Profile
@@ -223,14 +223,14 @@ export default function ProfilePage() {
 
                             {/* ── EDIT FORM ── */}
                             {isEditing && (
-                                <div className="bg-[#0D1428]/80 border border-white/10 rounded-3xl p-8 animate-in fade-in slide-in-from-bottom-3 duration-300">
+                                <div className="bg-card/80 border border-slate-200 dark:border-border rounded-3xl p-8 animate-in fade-in slide-in-from-bottom-3 duration-300">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center">
-                                            <Edit2 className="w-4 h-4 text-blue-400" />
+                                        <div className="w-8 h-8 rounded-xl bg-brand-primary/15 border border-brand-primary/25 flex items-center justify-center">
+                                            <Edit2 className="w-4 h-4 text-brand-primary" />
                                         </div>
                                         <div>
-                                            <h3 className="text-base font-black text-white">Edit Information</h3>
-                                            <p className="text-xs text-slate-500">Update your display name below</p>
+                                            <h3 className="text-base font-black text-foreground">Edit Information</h3>
+                                            <p className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">Update your display name below</p>
                                         </div>
                                     </div>
 
@@ -244,12 +244,12 @@ export default function ProfilePage() {
                                     <form onSubmit={handleSave} className="space-y-5 max-w-md">
                                         {/* display name */}
                                         <div>
-                                            <label htmlFor="displayName" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                                            <label htmlFor="displayName" className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-2">
                                                 Full Name
                                             </label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                    <UserIcon className="h-4 w-4 text-slate-600" />
+                                                    <UserIcon className="h-4 w-4 text-slate-400 dark:text-foreground/30" />
                                                 </div>
                                                 <input
                                                     id="displayName"
@@ -258,44 +258,44 @@ export default function ProfilePage() {
                                                     onChange={(e) => setDisplayName(e.target.value)}
                                                     disabled={saveLoading}
                                                     required
-                                                    className="block w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 transition-all disabled:opacity-40"
+                                                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-2xl text-sm font-bold text-foreground placeholder-slate-400 dark:placeholder-foreground/30 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary/60 transition-all disabled:opacity-40"
                                                 />
                                             </div>
                                         </div>
 
                                         {/* email (read-only) */}
                                         <div className="opacity-50">
-                                            <label htmlFor="email-ro" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
-                                                Email Address <span className="normal-case font-medium">(read-only)</span>
+                                            <label htmlFor="email-ro" className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-2">
+                                                Email Address <span className="normal-case font-bold">(read-only)</span>
                                             </label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                    <Mail className="h-4 w-4 text-slate-600" />
+                                                    <Mail className="h-4 w-4 text-slate-400 dark:text-foreground/30" />
                                                 </div>
                                                 <input
                                                     id="email-ro"
                                                     type="email"
                                                     value={profile.email}
                                                     disabled
-                                                    className="block w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-2xl text-sm font-bold text-slate-600 dark:text-foreground/60 cursor-not-allowed"
                                                 />
                                             </div>
                                         </div>
 
                                         {/* role (read-only) */}
                                         <div className="opacity-50">
-                                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
-                                                Role <span className="normal-case font-medium">(read-only)</span>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-foreground/40 mb-2">
+                                                Role <span className="normal-case font-bold">(read-only)</span>
                                             </label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                    <KeyRound className="h-4 w-4 text-slate-600" />
+                                                    <KeyRound className="h-4 w-4 text-slate-400 dark:text-foreground/30" />
                                                 </div>
                                                 <input
                                                     type="text"
                                                     value={profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : ""}
                                                     disabled
-                                                    className="block w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-slate-400 cursor-not-allowed capitalize"
+                                                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-100 dark:bg-foreground/5 border border-slate-200 dark:border-border rounded-2xl text-sm font-bold text-slate-600 dark:text-foreground/60 cursor-not-allowed capitalize"
                                                 />
                                             </div>
                                         </div>
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                                                     setError(null);
                                                 }}
                                                 disabled={saveLoading}
-                                                className="inline-flex items-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-bold px-6 py-3 rounded-xl transition-all disabled:opacity-50"
+                                                className="inline-flex items-center gap-2 border border-slate-200 dark:border-border bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 text-slate-600 dark:text-foreground/60 font-black text-sm uppercase tracking-widest px-6 py-3 rounded-xl transition-all disabled:opacity-50"
                                             >
                                                 <X className="w-4 h-4" />
                                                 Cancel
@@ -341,26 +341,26 @@ export default function ProfilePage() {
                             )}
 
                             {/* ── ACCOUNT SECURITY CARD ── */}
-                            <div className="bg-[#0D1428]/80 border border-white/10 rounded-3xl p-6">
-                                <h3 className="text-sm font-black text-white mb-4 flex items-center gap-2">
-                                    <Shield className="w-4 h-4 text-blue-400" />
+                            <div className="bg-card/80 border border-slate-200 dark:border-border rounded-3xl p-6">
+                                <h3 className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <Shield className="w-4 h-4 text-brand-primary" />
                                     Account Security
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="flex items-start gap-3 p-4 bg-white/5 border border-white/8 rounded-2xl">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0 shadow-sm shadow-emerald-400/60" />
+                                    <div className="flex items-start gap-3 p-4 bg-foreground/[0.02] border border-slate-200 dark:border-border rounded-2xl">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0 shadow-sm shadow-emerald-500/60" />
                                         <div>
-                                            <p className="text-sm font-bold text-white">Email Verified</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">
+                                            <p className="text-sm font-black text-foreground">Email Verified</p>
+                                            <p className="text-[10px] font-bold text-slate-500 dark:text-foreground/40 mt-0.5 uppercase tracking-wider">
                                                 {user?.emailVerified ? "Your email is verified" : "Email not yet verified"}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-3 p-4 bg-white/5 border border-white/8 rounded-2xl">
-                                        <div className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/60" />
+                                    <div className="flex items-start gap-3 p-4 bg-foreground/[0.02] border border-slate-200 dark:border-border rounded-2xl">
+                                        <div className="w-2 h-2 rounded-full bg-brand-primary mt-1.5 shrink-0 shadow-sm shadow-brand-primary/60" />
                                         <div>
-                                            <p className="text-sm font-bold text-white">Institutional Account</p>
-                                            <p className="text-xs text-slate-500 mt-0.5">Managed by university system</p>
+                                            <p className="text-sm font-black text-foreground">Institutional Account</p>
+                                            <p className="text-[10px] font-bold text-slate-500 dark:text-foreground/40 mt-0.5 uppercase tracking-wider">Managed by university system</p>
                                         </div>
                                     </div>
                                 </div>
@@ -369,13 +369,13 @@ export default function ProfilePage() {
 
                     ) : (
                         /* ── ERROR STATE ── */
-                        <div className="flex flex-col items-center justify-center py-32 gap-4 bg-white/3 border border-white/8 rounded-3xl">
+                        <div className="flex flex-col items-center justify-center py-32 gap-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl">
                             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                                 <AlertCircle className="w-8 h-8 text-red-400" />
                             </div>
                             <div className="text-center">
-                                <p className="text-white font-bold">Failed to load profile</p>
-                                <p className="text-slate-500 text-sm mt-1">Please refresh the page or try again later.</p>
+                                <p className="text-slate-800 dark:text-white font-bold">Failed to load profile</p>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Please refresh the page or try again later.</p>
                             </div>
                         </div>
                     )}

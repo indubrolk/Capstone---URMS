@@ -11,7 +11,7 @@ export default function ProtectedRoute({
     children: React.ReactNode;
     allowedRoles?: string[];
 }) {
-    const { user, loading } = useAuth();
+    const { user, profile, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -34,7 +34,7 @@ export default function ProtectedRoute({
 
     // Role check: if allowedRoles is specified, verify the user has one of them
     if (allowedRoles && allowedRoles.length > 0) {
-        const userRole: string = (user as any).role || (user as any).admin ? 'admin' : 'student';
+        const userRole = profile?.role || 'student';
         if (!allowedRoles.includes(userRole)) {
             return (
                 <div className="flex items-center justify-center min-h-screen flex-col gap-4">

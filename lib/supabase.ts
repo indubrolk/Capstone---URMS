@@ -21,20 +21,22 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     .from("users")
     .select("*")
     .eq("id", uid)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.error("Error fetching user profile:", error);
+    // Log full error details for debugging
+    console.error("Error fetching user profile:", JSON.stringify(error, null, 2));
     return null;
   }
 
-  return data as UserProfile;
+  // data is null when no matching row exists (new user without a profile yet)
+  return data as UserProfile | null;
 }
 
 export async function createUserProfile(profile: Omit<UserProfile, "created_at">) {
   const { error } = await supabase.from("users").upsert(profile);
   if (error) {
-    console.error("Error creating user profile:", error);
-    throw error;
+    console.error("Error creating user profile:", JSON.stringify(error, null, 2));
+    throw new Error(`Failed to create user profile: ${error.message || JSON.stringify(error)}`);
   }
 }

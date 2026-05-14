@@ -3,8 +3,26 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Landmark, AtSign, Lock, Eye, EyeOff, ArrowRight, X } from "lucide-react";
+import { AtSign, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Sparkles, Shield, Zap, Users, Home, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+
+/* ─── tiny animated orb helper ─── */
+function Orb({ className }: { className: string }) {
+    return <div className={`absolute rounded-full blur-3xl opacity-20 animate-pulse ${className}`} />;
+}
+
+/* ─── floating stat card ─── */
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+    return (
+        <div className="flex items-center gap-3 bg-slate-200/50 dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/20 rounded-2xl px-4 py-3">
+            <div className="text-blue-500 dark:text-blue-300">{icon}</div>
+            <div>
+                <p className="text-slate-800 dark:text-white font-bold text-sm leading-none">{value}</p>
+                <p className="text-slate-600 dark:text-white/60 text-xs mt-0.5">{label}</p>
+            </div>
+        </div>
+    );
+}
 
 export default function LoginPage() {
     const { signIn, setMockUser } = useAuth();
@@ -15,6 +33,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -43,52 +62,104 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-[calc(100vh-64px)] bg-white overflow-hidden">
-            {/* Left Pane - Visual Cover */}
-            <div className="hidden lg:flex lg:w-1/2 relative bg-brand-primary overflow-hidden flex-col justify-end p-16">
+        <div className="flex h-screen overflow-hidden bg-background">
+
+            {/* ══════════════ LEFT PANEL ══════════════ */}
+            <div className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-10 overflow-hidden">
+                {/* animated background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-background via-cyan-950/20 to-background" />
+                <Orb className="w-96 h-96 bg-cyan-600 -top-24 -left-24" />
+                <Orb className="w-72 h-72 bg-blue-500 bottom-32 right-0" />
+                <Orb className="w-48 h-48 bg-sky-400 top-1/2 left-1/3" />
+
+                {/* grid overlay */}
+                <div
+                    className="absolute inset-0 opacity-[0.04]"
+                    style={{
+                        backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)",
+                        backgroundSize: "40px 40px"
+                    }}
+                />
+
+                {/* campus photo overlay */}
                 <div className="absolute inset-0">
                     <img
                         src="https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=2000&auto=format&fit=crop"
                         alt="University Campus"
-                        className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+                        className="w-full h-full object-cover opacity-10 mix-blend-luminosity"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-brand-secondary via-brand-secondary/40 to-transparent"></div>
                 </div>
 
-                <div className="relative z-10 flex flex-col gap-4 max-w-md">
-                    <div className="bg-white p-2 rounded-xl w-fit shadow-xl border border-white/20">
-                        <img
-                            src="/urms-logo.png"
-                            alt="URMS Logo"
-                            className="w-10 h-10 object-contain"
-                        />
+                {/* content */}
+                <div className="relative z-10">
+                    <div className="inline-flex items-center gap-2 bg-card backdrop-blur border border-slate-200 dark:border-border rounded-full px-4 py-2 mb-8">
+                        <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-300" />
+                        <span className="text-slate-700 dark:text-foreground/80 text-xs font-semibold tracking-wide">University Resource Management</span>
                     </div>
-                    <h2 className="text-4xl font-black text-white leading-tight">
-                        Streamlining <br />
-                        Campus Evolution.
-                    </h2>
-                    <p className="text-white/80 font-medium text-lg">
-                        Access the centralized hub for university resource management and laboratory analytics.
-                    </p>
+                </div>
+
+                <div className="relative z-10 flex flex-col gap-8">
+                    <div>
+                        <h2 className="text-5xl font-black text-foreground leading-[1.1] tracking-tight mb-5">
+                            Streamline<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-sky-400 dark:from-blue-300 dark:to-sky-200">
+                                Campus Resources.
+                            </span>
+                        </h2>
+                        <p className="text-slate-600 dark:text-foreground/60 text-lg font-medium leading-relaxed max-w-sm">
+                            Access the centralized hub for university resource management and laboratory analytics.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <StatCard icon={<Shield className="w-4 h-4" />} label="Uptime" value="99.9%" />
+                        <StatCard icon={<Users className="w-4 h-4" />} label="Active Users" value="15K+" />
+                        <StatCard icon={<Zap className="w-4 h-4" />} label="Resources" value="1,200+" />
+                        <StatCard icon={<Sparkles className="w-4 h-4" />} label="Departments" value="50+" />
+                    </div>
                 </div>
             </div>
 
-            {/* Right Pane - Form */}
-            <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 sm:p-12">
-                <div className="w-full max-w-sm">
-                    <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Welcome back</h1>
-                        <p className="text-slate-500 font-medium italic">Please enter your credentials</p>
+            {/* ══════════════ RIGHT PANEL ══════════════ */}
+            <div className="flex w-full lg:w-[48%] flex-col p-6 sm:p-8 relative overflow-y-auto">
+                {/* Back to Home Link */}
+                <div className="flex justify-start mb-6">
+                    <Link 
+                        href="/" 
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 border border-slate-200 dark:border-border text-slate-700 dark:text-foreground/70 hover:text-foreground text-[10px] font-black uppercase tracking-widest transition-all group z-20"
+                    >
+                        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        Back to Home
+                    </Link>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-950/[0.05] dark:from-cyan-950/20 to-background -z-10" />
+                    <Orb className="w-64 h-64 bg-cyan-700 top-0 right-0 opacity-10" />
+
+                    <div className="relative z-10 w-full max-w-sm">
+
+
+                    {/* heading */}
+                    <div className="mb-6">
+                        <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-3 py-1 mb-5">
+                            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                            <span className="text-cyan-600 dark:text-cyan-300 text-xs font-semibold">Secure Portal</span>
+                        </div>
+                        <h1 className="text-3xl font-black text-foreground tracking-tight mb-2">Welcome back</h1>
+                        <p className="text-slate-600 dark:text-foreground/60 font-medium">Sign in to your institutional account</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                        <div className="space-y-2">
-                            <label htmlFor="email" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+
+                        {/* Email */}
+                        <div>
+                            <label htmlFor="email" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">
                                 Institutional Email
                             </label>
-                            <div className="relative group">
+                            <div className={`relative transition-all duration-200 ${focusedField === "email" ? "scale-[1.01]" : ""}`}>
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <AtSign className="h-5 w-5 text-slate-400 transition-colors group-focus-within:text-brand-primary" />
+                                    <AtSign className={`h-4 w-4 transition-colors ${focusedField === "email" ? "text-cyan-400" : "text-slate-600"}`} />
                                 </div>
                                 <input
                                     id="email"
@@ -96,23 +167,28 @@ export default function LoginPage() {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    onFocus={() => setFocusedField("email")}
+                                    onBlur={() => setFocusedField(null)}
                                     placeholder="name@university.ac.lk"
-                                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all disabled:opacity-50"
                                     disabled={loading}
+                                    className="block w-full pl-11 pr-4 py-3.5 bg-card border border-slate-200 dark:border-border rounded-2xl text-sm font-semibold text-foreground placeholder-slate-500 dark:placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        {/* Password */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-slate-500">
                                     Password
                                 </label>
-                                <Link href="/forgot-password" className="text-xs font-bold text-brand-primary hover:underline">Forgot?</Link>
+                                <Link href="/forgot-password" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+                                    Forgot?
+                                </Link>
                             </div>
-                            <div className="relative group">
+                            <div className={`relative transition-all duration-200 ${focusedField === "password" ? "scale-[1.01]" : ""}`}>
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Lock className="h-5 w-5 text-slate-400 transition-colors group-focus-within:text-brand-primary" />
+                                    <Lock className={`h-4 w-4 transition-colors ${focusedField === "password" ? "text-cyan-400" : "text-slate-600"}`} />
                                 </div>
                                 <input
                                     id="password"
@@ -120,92 +196,94 @@ export default function LoginPage() {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    onFocus={() => setFocusedField("password")}
+                                    onBlur={() => setFocusedField(null)}
                                     placeholder="••••••••"
-                                    className="block w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary transition-all disabled:opacity-50"
                                     disabled={loading}
+                                    className="block w-full pl-11 pr-12 py-3.5 bg-card border border-slate-200 dark:border-border rounded-2xl text-sm font-semibold text-foreground placeholder-slate-500 dark:placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-600 hover:text-slate-300 transition-colors"
                                 >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                         </div>
 
+                        {/* Error */}
                         {error && (
-                            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <div className="p-1 bg-red-500 rounded-full text-white">
-                                    <X className="w-3" />
-                                </div>
-                                <p className="text-sm font-bold text-red-600 leading-tight">{error}</p>
+                            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                                <p className="text-sm font-semibold text-red-400 leading-tight">{error}</p>
                             </div>
                         )}
 
+                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-2xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+                            className="w-full relative overflow-hidden bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 text-white font-bold py-4 rounded-2xl transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                         >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                             {loading ? (
                                 <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>
                                     Sign In
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <p className="mt-10 text-center text-sm font-medium text-slate-500">
-                        Don't have an account? {" "}
-                        <Link href="/register" className="font-bold text-brand-primary hover:underline transition-all">Create Account</Link>
+                    <p className="mt-6 text-center text-sm font-medium text-slate-600">
+                        Don&apos;t have an account?{" "}
+                        <Link href="/register" className="font-bold text-cyan-400 hover:text-cyan-300 transition-colors">
+                            Create Account
+                        </Link>
                     </p>
 
-                    {/* Demo Access Panel */}
-                    <div className="mt-12 pt-8 border-t border-slate-100">
-                        <div className="mb-6 text-center">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-1">Demo Quick Access</h3>
-                            <p className="text-xs font-medium text-slate-500 italic">Instant mock login for evaluation</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={() => {
-                                    const { setMockUser } = useAuth(); // We need to handle this inside the component body
-                                    // Actually, I should use the already destuctured one
-                                }}
-                                className="hidden"
-                            ></button>
-                            <DemoButton role="admin" onClick={() => setMockUser("admin")} />
-                            <DemoButton role="maintenance" onClick={() => setMockUser("maintenance")} />
-                            <DemoButton role="lecturer" onClick={() => setMockUser("lecturer")} />
-                            <DemoButton role="student" onClick={() => setMockUser("student")} />
+                    {/* Demo Access */}
+                    <div className="mt-6 pt-6 border-t border-white/5">
+                        <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-600 mb-4">
+                            Quick Demo Access
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {(["admin", "maintenance", "lecturer", "student"] as const).map((role) => (
+                                <DemoButton key={role} role={role} onClick={() => setMockUser(role)} />
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     );
 }
 
-function DemoButton({ role, onClick }: { role: string, onClick: () => void }) {
+function DemoButton({ role, onClick }: { role: string; onClick: () => void }) {
     const router = useRouter();
     const handleClick = () => {
         onClick();
         router.push("/dashboard");
     };
 
+    const colors: Record<string, string> = {
+        admin: "from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-300 hover:border-purple-400/50",
+        maintenance: "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-300 hover:border-amber-400/50",
+        lecturer: "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-300 hover:border-emerald-400/50",
+        student: "from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-300 hover:border-blue-400/50",
+    };
+
     return (
         <button
             onClick={handleClick}
-            className="flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all group"
+            className={`flex items-center justify-between px-4 py-3 bg-gradient-to-r border rounded-xl transition-all group ${colors[role] ?? colors.student}`}
         >
-            <span className="text-xs font-black uppercase tracking-tight text-slate-600 group-hover:text-brand-primary transition-colors">
-                {role}
-            </span>
-            <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-brand-primary group-hover:translate-x-0.5 transition-all" />
+            <span className="text-xs font-black uppercase tracking-tight capitalize">{role}</span>
+            <ArrowRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 group-hover:opacity-100 transition-all" />
         </button>
     );
 }

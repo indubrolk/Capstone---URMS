@@ -68,19 +68,24 @@ export default function AdminMaintenanceDashboard() {
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data: MaintenanceTicket[] = await res.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format: expected an array of tickets");
+      }
+
       setTasks(data.map(t => ({
         id: `REQ-${String(t.id).slice(0, 8).toUpperCase()}`,
         rawId: t.id,
-        resourceName: `Resource #${String(t.resourceId).slice(0, 8)}`,
+        resourceName: t.resourceName || `Resource #${String(t.resourceId).slice(0, 8)}`,
         title: t.title,
         description: t.description || t.title,
-        requestedDate: new Date(t.created_at).toLocaleDateString(),
+        requestedDate: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A',
         status: (STATUS_DISPLAY[t.status] || "Pending") as MaintenanceTask["status"],
         rawStatus: t.status,
         priority: t.priority,
         assignedTo: t.assignedTo
       })));
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to fetch maintenance tasks:", e);
     } finally {
       setLoading(false);

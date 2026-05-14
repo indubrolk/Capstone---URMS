@@ -22,14 +22,8 @@ if (missingEnv.length > 0) {
   );
 }
 
-// Guard against re-initialization in Next.js hot-reload
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-
-if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "your_api_key_here") {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    auth = getAuth(app);
-}
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
 
 export { auth };
 export default app;

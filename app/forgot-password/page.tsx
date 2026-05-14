@@ -25,7 +25,7 @@ function Orb({ className }: { className: string }) {
 function Step({ num, title, desc, active }: { num: string; title: string; desc: string; active?: boolean }) {
     return (
         <div className="flex items-start gap-4">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-all ${active ? "bg-blue-500/30 border-blue-400/60" : "bg-white/5 border-white/10"}`}>
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition-all ${active ? "bg-blue-500/30 border-blue-400/60" : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"}`}>
                 <span className={`text-xs font-black ${active ? "text-blue-300" : "text-slate-500"}`}>{num}</span>
             </div>
             <div className="pt-1">
@@ -50,6 +50,11 @@ export default function ForgotPasswordPage() {
 
         if (!email) {
             setError("Please enter your email address.");
+            return;
+        }
+
+        if (!auth) {
+            setError("Authentication service is not available. Please try again later.");
             return;
         }
 
@@ -104,7 +109,7 @@ export default function ForgotPasswordPage() {
 
                 {/* top badge */}
                 <div className="relative z-10">
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/20 rounded-full px-4 py-2">
+                    <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-white/10 backdrop-blur border border-slate-300 dark:border-white/20 rounded-full px-4 py-2">
                         <ShieldCheck className="w-4 h-4 text-blue-300" />
                         <span className="text-white/80 text-xs font-semibold tracking-wide">Secure Account Recovery</span>
                     </div>
@@ -174,7 +179,7 @@ export default function ForgotPasswordPage() {
                             </div>
 
                             {/* info card */}
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3 mb-8">
+                            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-5 space-y-3 mb-8">
                                 {[
                                     { icon: <Mail className="w-4 h-4 text-blue-400" />, text: "Check your spam/junk folder if you don't see it" },
                                     { icon: <KeyRound className="w-4 h-4 text-blue-400" />, text: "The link expires in 1 hour for security" },
@@ -189,7 +194,7 @@ export default function ForgotPasswordPage() {
 
                             <button
                                 onClick={() => setSuccess(null)}
-                                className="w-full flex items-center justify-center gap-2 border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-bold py-3.5 rounded-2xl transition-all group"
+                                className="w-full flex items-center justify-center gap-2 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:bg-white/10 text-slate-300 font-bold py-3.5 rounded-2xl transition-all group"
                             >
                                 <RotateCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                                 Resend Email
@@ -227,7 +232,7 @@ export default function ForgotPasswordPage() {
                                             onBlur={() => setFocusedField(false)}
                                             placeholder="name@university.ac.lk"
                                             disabled={loading}
-                                            className="block w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
+                                            className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
                                         />
                                     </div>
                                 </div>

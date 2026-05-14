@@ -6,13 +6,14 @@ import { usePathname } from "next/navigation";
 import { LogOut, Menu, X, ChevronDown, User, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import GlobalSearch from "./GlobalSearch";
+import { ThemeToggle } from "./ThemeToggle";
 
 /* ── role colours ─────────────────────────────────────────── */
 const roleMeta: Record<string, { label: string; dot: string; badge: string; text: string }> = {
-    admin:       { label: "Administrator", dot: "bg-purple-500", badge: "bg-purple-50 border-purple-200",  text: "text-purple-700"  },
-    lecturer:    { label: "Lecturer",      dot: "bg-emerald-500",badge: "bg-emerald-50 border-emerald-200",text: "text-emerald-700" },
-    student:     { label: "Student",       dot: "bg-blue-500",   badge: "bg-blue-50 border-blue-200",      text: "text-blue-700"    },
-    maintenance: { label: "Maintenance",   dot: "bg-amber-500",  badge: "bg-amber-50 border-amber-200",    text: "text-amber-700"   },
+    admin:       { label: "Administrator", dot: "bg-purple-500", badge: "bg-purple-500/10 border-purple-500/20",  text: "text-purple-600 dark:text-purple-400"  },
+    lecturer:    { label: "Lecturer",      dot: "bg-emerald-500",badge: "bg-emerald-500/10 border-emerald-500/20",text: "text-emerald-600 dark:text-emerald-400" },
+    student:     { label: "Student",       dot: "bg-blue-500",   badge: "bg-blue-500/10 border-blue-500/20",      text: "text-blue-600 dark:text-blue-400"    },
+    maintenance: { label: "Maintenance",   dot: "bg-amber-500",  badge: "bg-amber-500/10 border-amber-500/20",    text: "text-amber-600 dark:text-amber-400"   },
 };
 
 export default function Navbar() {
@@ -101,8 +102,8 @@ export default function Navbar() {
     return (
         <>
             {/* ════════════════════ NAVBAR ════════════════════ */}
-            <nav className={`sticky top-0 z-50 w-full bg-white transition-all duration-300 ${
-                scrolled ? "shadow-[0_2px_24px_rgba(0,0,0,0.08)] border-b border-slate-100" : "border-b border-slate-100/60"
+            <nav className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md transition-all duration-300 ${
+                scrolled ? "shadow-sm border-b border-slate-200 dark:border-border" : "border-b border-transparent"
             }`}>
 
                 {/* animated top accent line */}
@@ -123,13 +124,13 @@ export default function Navbar() {
                                 {/* glow ring on hover */}
                                 <span className="absolute inset-0 rounded-xl scale-0 group-hover:scale-110 bg-brand-primary/10 transition-transform duration-300 ease-out" />
                                 <img
-                                    src="/logo.png"
+                                    src="/urms-logo.png"
                                     alt="URMS Logo"
                                     className="relative w-8 h-8 rounded-xl object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm"
                                 />
                             </div>
-                            <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-brand-primary transition-colors duration-200">
-                                Uni<span className="text-brand-primary group-hover:text-slate-900 transition-colors duration-200">Link</span>
+                            <span className="text-xl font-black tracking-tight text-foreground group-hover:text-brand-primary transition-colors duration-200">
+                                Uni<span className="text-brand-primary group-hover:text-foreground transition-colors duration-200">Link</span>
                             </span>
                         </Link>
 
@@ -162,7 +163,7 @@ export default function Navbar() {
                                         className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-150 ${
                                             isActive
                                                 ? "text-brand-primary"
-                                                : "text-slate-500 hover:text-slate-900"
+                                                : "text-slate-600 dark:text-foreground/60 hover:text-foreground"
                                         }`}
                                     >
                                         {/* active dot */}
@@ -176,7 +177,7 @@ export default function Navbar() {
                         </div>
 
                         {/* ── USER / AUTH AREA ── */}
-                        <div className="hidden md:flex items-center gap-2 shrink-0">
+                        <div className="hidden md:flex items-center gap-3 shrink-0">
                             {user ? (
                                 <div className="relative" ref={userMenuRef}>
                                     <button
@@ -184,7 +185,7 @@ export default function Navbar() {
                                         className={`flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-2xl border transition-all duration-200 ${
                                             userMenu
                                                 ? "border-brand-primary/30 bg-brand-primary/5 shadow-sm"
-                                                : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white hover:shadow-sm"
+                                                : "border-slate-200 dark:border-border bg-slate-100 dark:bg-foreground/5 hover:border-brand-primary/20 hover:bg-slate-200 dark:bg-foreground/10 hover:shadow-sm"
                                         }`}
                                     >
                                         {/* avatar */}
@@ -192,28 +193,28 @@ export default function Navbar() {
                                             {initials}
                                         </div>
                                         <div className="text-left leading-none">
-                                            <p className="text-xs font-bold text-slate-900">
+                                            <p className="text-xs font-bold text-foreground">
                                                 {profile?.name?.split(" ")[0] ?? "User"}
                                             </p>
                                             {meta && (
                                                 <p className={`text-[10px] font-semibold mt-0.5 ${meta.text}`}>{meta.label}</p>
                                             )}
                                         </div>
-                                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${userMenu ? "rotate-180" : ""}`} />
+                                        <ChevronDown className={`w-3.5 h-3.5 text-slate-500 dark:text-foreground/40 transition-transform duration-200 ${userMenu ? "rotate-180" : ""}`} />
                                     </button>
 
                                     {/* ── DROPDOWN ── */}
                                     {userMenu && (
-                                        <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                                        <div className="absolute right-0 mt-2 w-56 bg-card border border-slate-200 dark:border-border rounded-2xl shadow-xl shadow-black/10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-50">
                                             {/* header */}
-                                            <div className="px-4 py-3.5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                                            <div className="px-4 py-3.5 bg-slate-100 dark:bg-foreground/5 border-b border-slate-200 dark:border-border">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center text-white text-sm font-black shadow-md shrink-0">
                                                         {initials}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-900 truncate">{profile?.name ?? "User"}</p>
-                                                        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                                                        <p className="text-sm font-bold text-foreground truncate">{profile?.name ?? "User"}</p>
+                                                        <p className="text-xs text-slate-500 dark:text-foreground/40 truncate">{user.email}</p>
                                                     </div>
                                                 </div>
                                                 {meta && (
@@ -228,19 +229,19 @@ export default function Navbar() {
                                                 <Link
                                                     href="/profile"
                                                     onClick={() => setUserMenu(false)}
-                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all group"
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-foreground/60 hover:text-foreground hover:bg-slate-100 dark:bg-foreground/5 transition-all group"
                                                 >
-                                                    <span className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-brand-primary/10 flex items-center justify-center transition-colors">
-                                                        <User className="w-3.5 h-3.5 text-slate-500 group-hover:text-brand-primary transition-colors" />
+                                                    <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-foreground/5 group-hover:bg-brand-primary/10 flex items-center justify-center transition-colors">
+                                                        <User className="w-3.5 h-3.5 text-slate-500 dark:text-foreground/40 group-hover:text-brand-primary transition-colors" />
                                                     </span>
                                                     My Profile
                                                 </Link>
                                                 <button
                                                     onClick={() => { signOut(); setUserMenu(false); }}
-                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 transition-all group"
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all group"
                                                 >
-                                                    <span className="w-7 h-7 rounded-lg bg-red-50 group-hover:bg-red-100 flex items-center justify-center transition-colors">
-                                                        <LogOut className="w-3.5 h-3.5 text-red-400" />
+                                                    <span className="w-7 h-7 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 flex items-center justify-center transition-colors">
+                                                        <LogOut className="w-3.5 h-3.5 text-red-500" />
                                                     </span>
                                                     Sign Out
                                                 </button>
@@ -252,7 +253,7 @@ export default function Navbar() {
                                 <div className="flex items-center gap-2">
                                     <Link
                                         href="/register"
-                                        className="text-sm font-semibold text-slate-500 hover:text-slate-900 px-4 py-2 rounded-xl hover:bg-slate-50 transition-all"
+                                        className="text-sm font-semibold text-slate-600 dark:text-foreground/60 hover:text-foreground px-4 py-2 rounded-xl hover:bg-slate-100 dark:bg-foreground/5 transition-all"
                                     >
                                         Register
                                     </Link>
@@ -267,17 +268,19 @@ export default function Navbar() {
                                     </Link>
                                 </div>
                             )}
+                            <div className="w-px h-6 bg-border mx-1" />
+                            <ThemeToggle />
                         </div>
 
                         {/* ── HAMBURGER ── */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="md:hidden relative w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all"
+                            className="md:hidden relative w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-xl border border-slate-200 dark:border-border bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 transition-all"
                             aria-label="Toggle menu"
                         >
-                            <span className={`block h-0.5 bg-slate-700 rounded-full transition-all duration-300 origin-center ${isOpen ? "w-5 rotate-45 translate-y-[7px]" : "w-5"}`} />
-                            <span className={`block h-0.5 bg-slate-700 rounded-full transition-all duration-300 ${isOpen ? "w-0 opacity-0" : "w-4"}`} />
-                            <span className={`block h-0.5 bg-slate-700 rounded-full transition-all duration-300 origin-center ${isOpen ? "w-5 -rotate-45 -translate-y-[7px]" : "w-5"}`} />
+                            <span className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 origin-center ${isOpen ? "w-5 rotate-45 translate-y-[7px]" : "w-5"}`} />
+                            <span className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 ${isOpen ? "w-0 opacity-0" : "w-4"}`} />
+                            <span className={`block h-0.5 bg-foreground rounded-full transition-all duration-300 origin-center ${isOpen ? "w-5 -rotate-45 -translate-y-[7px]" : "w-5"}`} />
                         </button>
                     </div>
                 </div>
@@ -292,19 +295,19 @@ export default function Navbar() {
                 />
 
                 {/* panel */}
-                <div className={`absolute top-16 left-3 right-3 bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200/80 overflow-hidden transition-all duration-300 ${
+                <div className={`absolute top-16 left-3 right-3 bg-background border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden transition-all duration-300 ${
                     isOpen ? "translate-y-0 opacity-100 scale-100" : "-translate-y-3 opacity-0 scale-95"
                 }`}>
 
                     {/* user strip */}
                     {user && (
-                        <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+                        <div className="flex items-center gap-3 px-5 py-4 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-blue-600 flex items-center justify-center text-white font-black shadow-md shrink-0">
                                 {initials}
                             </div>
                             <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-900 truncate">{profile?.name ?? "User"}</p>
-                                <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                                <p className="text-sm font-bold text-foreground truncate">{profile?.name ?? "User"}</p>
+                                <p className="text-xs text-slate-500 dark:text-foreground/40 truncate">{user.email}</p>
                             </div>
                             {meta && (
                                 <span className={`ml-auto shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border ${meta.badge} ${meta.text}`}>
@@ -326,8 +329,8 @@ export default function Navbar() {
                                     onClick={() => setIsOpen(false)}
                                     className={`nav-item-enter flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                                         isActive
-                                            ? "bg-brand-primary/8 text-brand-primary"
-                                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                            ? "bg-brand-primary/10 text-brand-primary"
+                                            : "text-slate-600 dark:text-foreground/60 hover:text-foreground hover:bg-slate-50 dark:bg-white/5"
                                     }`}
                                     style={{ animationDelay: `${i * 40}ms` }}
                                 >
@@ -347,9 +350,9 @@ export default function Navbar() {
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-foreground/60 hover:text-foreground hover:bg-slate-50 dark:bg-white/5 transition-all"
                                 >
-                                    <User className="w-4 h-4 text-slate-400" />
+                                    <User className="w-4 h-4 text-slate-500 dark:text-foreground/40" />
                                     My Profile
                                 </Link>
                                 <button
@@ -373,7 +376,7 @@ export default function Navbar() {
                                 <Link
                                     href="/register"
                                     onClick={() => setIsOpen(false)}
-                                    className="w-full flex items-center justify-center py-3 rounded-xl text-sm font-bold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all"
+                                    className="w-full flex items-center justify-center py-3 rounded-xl text-sm font-bold text-slate-600 dark:text-foreground/60 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:bg-white/5 transition-all"
                                 >
                                     Create Account
                                 </Link>

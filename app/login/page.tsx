@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AtSign, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Sparkles, Shield, Zap, Users } from "lucide-react";
+import { AtSign, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Sparkles, Shield, Zap, Users, Home, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 /* ─── tiny animated orb helper ─── */
@@ -14,11 +14,11 @@ function Orb({ className }: { className: string }) {
 /* ─── floating stat card ─── */
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
     return (
-        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3">
-            <div className="text-blue-300">{icon}</div>
+        <div className="flex items-center gap-3 bg-slate-200/50 dark:bg-white/10 backdrop-blur-sm border border-slate-300 dark:border-white/20 rounded-2xl px-4 py-3">
+            <div className="text-blue-500 dark:text-blue-300">{icon}</div>
             <div>
-                <p className="text-white font-bold text-sm leading-none">{value}</p>
-                <p className="text-white/60 text-xs mt-0.5">{label}</p>
+                <p className="text-slate-800 dark:text-white font-bold text-sm leading-none">{value}</p>
+                <p className="text-slate-600 dark:text-white/60 text-xs mt-0.5">{label}</p>
             </div>
         </div>
     );
@@ -62,14 +62,14 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-[calc(100vh-64px)] overflow-hidden bg-[#080E1E]">
+        <div className="flex h-screen overflow-hidden bg-background">
 
             {/* ══════════════ LEFT PANEL ══════════════ */}
-            <div className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-14 overflow-hidden">
+            <div className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-10 overflow-hidden">
                 {/* animated background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#0D1B3E] via-[#0a1530] to-[#080E1E]" />
-                <Orb className="w-96 h-96 bg-blue-600 -top-24 -left-24" />
-                <Orb className="w-72 h-72 bg-indigo-500 bottom-32 right-0" />
+                <div className="absolute inset-0 bg-gradient-to-br from-background via-cyan-950/20 to-background" />
+                <Orb className="w-96 h-96 bg-cyan-600 -top-24 -left-24" />
+                <Orb className="w-72 h-72 bg-blue-500 bottom-32 right-0" />
                 <Orb className="w-48 h-48 bg-sky-400 top-1/2 left-1/3" />
 
                 {/* grid overlay */}
@@ -92,21 +92,21 @@ export default function LoginPage() {
 
                 {/* content */}
                 <div className="relative z-10">
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/20 rounded-full px-4 py-2 mb-8">
-                        <Sparkles className="w-4 h-4 text-blue-300" />
-                        <span className="text-white/80 text-xs font-semibold tracking-wide">University Resource Management</span>
+                    <div className="inline-flex items-center gap-2 bg-card backdrop-blur border border-slate-200 dark:border-border rounded-full px-4 py-2 mb-8">
+                        <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-300" />
+                        <span className="text-slate-700 dark:text-foreground/80 text-xs font-semibold tracking-wide">University Resource Management</span>
                     </div>
                 </div>
 
                 <div className="relative z-10 flex flex-col gap-8">
                     <div>
-                        <h2 className="text-5xl font-black text-white leading-[1.1] tracking-tight mb-5">
+                        <h2 className="text-5xl font-black text-foreground leading-[1.1] tracking-tight mb-5">
                             Streamline<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-sky-200">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-sky-400 dark:from-blue-300 dark:to-sky-200">
                                 Campus Resources.
                             </span>
                         </h2>
-                        <p className="text-white/60 text-lg font-medium leading-relaxed max-w-sm">
+                        <p className="text-slate-600 dark:text-foreground/60 text-lg font-medium leading-relaxed max-w-sm">
                             Access the centralized hub for university resource management and laboratory analytics.
                         </p>
                     </div>
@@ -121,32 +121,45 @@ export default function LoginPage() {
             </div>
 
             {/* ══════════════ RIGHT PANEL ══════════════ */}
-            <div className="flex w-full lg:w-[48%] flex-col items-center justify-center p-8 sm:p-12 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0D1428] to-[#080E1E]" />
-                <Orb className="w-64 h-64 bg-blue-700 top-0 right-0 opacity-10" />
+            <div className="flex w-full lg:w-[48%] flex-col p-6 sm:p-8 relative overflow-y-auto">
+                {/* Back to Home Link */}
+                <div className="flex justify-start mb-6">
+                    <Link 
+                        href="/" 
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 border border-slate-200 dark:border-border text-slate-700 dark:text-foreground/70 hover:text-foreground text-[10px] font-black uppercase tracking-widest transition-all group z-20"
+                    >
+                        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        Back to Home
+                    </Link>
+                </div>
 
-                <div className="relative z-10 w-full max-w-sm">
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-950/[0.05] dark:from-cyan-950/20 to-background -z-10" />
+                    <Orb className="w-64 h-64 bg-cyan-700 top-0 right-0 opacity-10" />
+
+                    <div className="relative z-10 w-full max-w-sm">
+
 
                     {/* heading */}
-                    <div className="mb-10">
-                        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-3 py-1 mb-5">
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                            <span className="text-blue-300 text-xs font-semibold">Secure Portal</span>
+                    <div className="mb-6">
+                        <div className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full px-3 py-1 mb-5">
+                            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                            <span className="text-cyan-600 dark:text-cyan-300 text-xs font-semibold">Secure Portal</span>
                         </div>
-                        <h1 className="text-3xl font-black text-white tracking-tight mb-2">Welcome back</h1>
-                        <p className="text-slate-500 font-medium">Sign in to your institutional account</p>
+                        <h1 className="text-3xl font-black text-foreground tracking-tight mb-2">Welcome back</h1>
+                        <p className="text-slate-600 dark:text-foreground/60 font-medium">Sign in to your institutional account</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
 
                         {/* Email */}
                         <div>
-                            <label htmlFor="email" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                            <label htmlFor="email" className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">
                                 Institutional Email
                             </label>
                             <div className={`relative transition-all duration-200 ${focusedField === "email" ? "scale-[1.01]" : ""}`}>
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <AtSign className={`h-4 w-4 transition-colors ${focusedField === "email" ? "text-blue-400" : "text-slate-600"}`} />
+                                    <AtSign className={`h-4 w-4 transition-colors ${focusedField === "email" ? "text-cyan-400" : "text-slate-600"}`} />
                                 </div>
                                 <input
                                     id="email"
@@ -158,24 +171,24 @@ export default function LoginPage() {
                                     onBlur={() => setFocusedField(null)}
                                     placeholder="name@university.ac.lk"
                                     disabled={loading}
-                                    className="block w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
+                                    className="block w-full pl-11 pr-4 py-3.5 bg-card border border-slate-200 dark:border-border rounded-2xl text-sm font-semibold text-foreground placeholder-slate-500 dark:placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
                                 />
                             </div>
                         </div>
 
                         {/* Password */}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center justify-between mb-1">
                                 <label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-slate-500">
                                     Password
                                 </label>
-                                <Link href="/forgot-password" className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+                                <Link href="/forgot-password" className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
                                     Forgot?
                                 </Link>
                             </div>
                             <div className={`relative transition-all duration-200 ${focusedField === "password" ? "scale-[1.01]" : ""}`}>
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Lock className={`h-4 w-4 transition-colors ${focusedField === "password" ? "text-blue-400" : "text-slate-600"}`} />
+                                    <Lock className={`h-4 w-4 transition-colors ${focusedField === "password" ? "text-cyan-400" : "text-slate-600"}`} />
                                 </div>
                                 <input
                                     id="password"
@@ -187,7 +200,7 @@ export default function LoginPage() {
                                     onBlur={() => setFocusedField(null)}
                                     placeholder="••••••••"
                                     disabled={loading}
-                                    className="block w-full pl-11 pr-12 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-semibold text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
+                                    className="block w-full pl-11 pr-12 py-3.5 bg-card border border-slate-200 dark:border-border rounded-2xl text-sm font-semibold text-foreground placeholder-slate-500 dark:placeholder-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/60 focus:bg-white/8 transition-all disabled:opacity-40"
                                 />
                                 <button
                                     type="button"
@@ -211,7 +224,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-4 rounded-2xl transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+                            className="w-full relative overflow-hidden bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 text-white font-bold py-4 rounded-2xl transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
                             {loading ? (
@@ -225,15 +238,15 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    <p className="mt-8 text-center text-sm font-medium text-slate-600">
+                    <p className="mt-6 text-center text-sm font-medium text-slate-600">
                         Don&apos;t have an account?{" "}
-                        <Link href="/register" className="font-bold text-blue-400 hover:text-blue-300 transition-colors">
+                        <Link href="/register" className="font-bold text-cyan-400 hover:text-cyan-300 transition-colors">
                             Create Account
                         </Link>
                     </p>
 
                     {/* Demo Access */}
-                    <div className="mt-10 pt-8 border-t border-white/5">
+                    <div className="mt-6 pt-6 border-t border-white/5">
                         <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-600 mb-4">
                             Quick Demo Access
                         </p>
@@ -246,6 +259,7 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    </div>
     );
 }
 

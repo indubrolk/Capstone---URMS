@@ -9,6 +9,8 @@ import app from './app';
 import dotenv from 'dotenv';
 import { checkSupabaseConnection } from './config/supabaseClient';
 import { startDbWatchdog } from './services/dbMonitorService';
+import { startReportScheduler } from './services/schedulerService';
+import { startBackupCron } from './cron/backup.cron';
 
 dotenv.config();
 
@@ -43,4 +45,8 @@ async function connectWithRetry(retries = 10, delay = 5000): Promise<void> {
 app.listen(PORT, () => {
     console.log(`🚀 URMS Server running on http://localhost:${PORT}`);
     connectWithRetry();
+    
+    // Start automated background tasks
+    startReportScheduler();
+    startBackupCron();
 });

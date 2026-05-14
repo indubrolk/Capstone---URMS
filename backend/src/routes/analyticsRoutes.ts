@@ -34,4 +34,10 @@ router.get('/category-bookings', getCategoryBookings as any);
 router.get('/resource-utilization', getResourceUtilization as any);
 router.get('/peak-usage', getPeakUsage as any);
 
+// Export Routes
+import { exportAnalyticsPDF, exportAnalyticsExcel, exportAnalyticsSheets } from "../controllers/analyticsCtrl";
+router.get('/export/pdf', exportAnalyticsPDF as any);
+router.get('/export/excel', exportAnalyticsExcel as any);
+router.get('/export/google-sheets', exportAnalyticsSheets as any);
+
 export default router;

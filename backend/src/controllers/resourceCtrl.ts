@@ -25,7 +25,7 @@ export const getResources = async (req: AuthRequest, res: Response): Promise<voi
 // ── POST /api/resources ────────────────────────────────────
 export const addResource = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, type, capacity, location, availability_status, equipment } = req.body;
+    const { name, type, capacity, location, availability_status, equipment, department } = req.body;
 
     const newId = await ResourceModel.create({
       name,
@@ -33,7 +33,8 @@ export const addResource = async (req: AuthRequest, res: Response): Promise<void
       capacity,
       location,
       availability_status,
-      equipment: equipment || []
+      equipment: equipment || [],
+      department: department || null
     }, req.supabase);
 
     res.json({ message: "Resource added", id: newId });
@@ -47,7 +48,7 @@ export const addResource = async (req: AuthRequest, res: Response): Promise<void
 export const updateResource = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params.id as string;
-    const { name, type, capacity, location, availability_status, equipment } = req.body;
+    const { name, type, capacity, location, availability_status, equipment, department } = req.body;
 
     const success = await ResourceModel.update(id, {
       name,
@@ -55,7 +56,8 @@ export const updateResource = async (req: AuthRequest, res: Response): Promise<v
       capacity,
       location,
       availability_status,
-      equipment: equipment || []
+      equipment: equipment || [],
+      department: department
     }, req.supabase);
 
     if (!success) {
@@ -108,7 +110,8 @@ export const importResources = async (req: AuthRequest, res: Response): Promise<
         capacity:            r.capacity           || "0",
         location:            r.location,
         availability_status: r.availability_status || "Available",
-        equipment:           r.equipment          || []
+        equipment:           r.equipment          || [],
+        department:          r.department         || null
       }, req.supabase);
       insertedIds.push(id);
     }

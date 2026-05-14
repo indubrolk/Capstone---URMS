@@ -12,6 +12,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: UserRole;
+  department?: string;
   created_at: string;
 }
 

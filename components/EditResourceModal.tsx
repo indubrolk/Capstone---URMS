@@ -3,7 +3,7 @@ import { X, Check, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export interface Resource {
-    id: number;
+    id: string | number;
     name: string;
     type: string;
     capacity: string;

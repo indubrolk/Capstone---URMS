@@ -174,15 +174,18 @@ export default function AnalyticsDashboard() {
 
     const handleExport = async (format: 'pdf' | 'excel' | 'sheets', type: string) => {
         setExporting(`${type}-${format}`);
+        setError(null);
         try {
             const token = (user && typeof user.getIdToken === 'function') ? await user.getIdToken() : "dev-token";
             const qs = buildParams({ type, ...(timeRange !== 'custom' ? { range: timeRange } : {}) });
-            const response = await fetch(`${API}/api/admin/analytics/export/${format}${qs}`, {
+            // Fix: map 'sheets' to the correct backend route 'google-sheets'
+            const exportRoute = format === 'sheets' ? 'google-sheets' : format;
+            const response = await fetch(`${API}/api/admin/analytics/export/${exportRoute}${qs}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
-            if (!format.includes('sheets') && !response.ok) throw new Error(`Export failed with status: ${response.status}`);
-            
+
+            if (!response.ok) throw new Error(`Export failed (${response.status}): ${response.statusText}`);
+
             if (format === 'sheets') {
                 const result = await response.json();
                 setGoogleSheetUrl(result.data.spreadsheetUrl);
@@ -346,45 +349,90 @@ export default function AnalyticsDashboard() {
                                 ))}
                             </div>
 
-                            {/* Filters */}
-                            <div className="flex items-center gap-3 bg-card p-1.5 pr-3 rounded-2xl border border-slate-200 dark:border-border shadow-sm">
-                                <div className="relative group">
-                                    <select
-                                        value={department}
-                                        onChange={(e) => setDepartment(e.target.value)}
-                                        className="appearance-none pl-4 pr-10 py-2 bg-transparent text-slate-800 dark:text-foreground/90 font-black text-[10px] uppercase tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all cursor-pointer"
+                            {/* Filters + Export Bar */}
+                            <div className="flex flex-col gap-2 w-full xl:w-auto">
+                                <div className="flex items-center gap-3 bg-card p-1.5 pr-3 rounded-2xl border border-slate-200 dark:border-border shadow-sm flex-wrap">
+                                    {/* Department Selector */}
+                                    <div className="relative group">
+                                        <select
+                                            value={department}
+                                            onChange={(e) => setDepartment(e.target.value)}
+                                            className="appearance-none pl-4 pr-10 py-2 bg-transparent text-slate-800 dark:text-foreground/90 font-black text-[10px] uppercase tracking-widest rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all cursor-pointer"
+                                        >
+                                            <option value="" className="bg-card">All Departments</option>
+                                            {departments.map((dept) => (
+                                                <option key={dept} value={dept} className="bg-card">{dept}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-foreground/40 pointer-events-none" />
+                                    </div>
+
+                                    <div className="w-px h-5 bg-border mx-1" />
+
+                                    {/* Export buttons */}
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => handleExport('pdf', activeTab)}
+                                            disabled={!!exporting}
+                                            title="Export PDF"
+                                            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-foreground/10 transition-colors disabled:opacity-40"
+                                        >
+                                            {exporting === `${activeTab}-pdf`
+                                                ? <RefreshCcw className="w-4 h-4 text-red-500 animate-spin" />
+                                                : <FileText className="w-4 h-4 text-red-500" />}
+                                        </button>
+                                        <button
+                                            onClick={() => handleExport('excel', activeTab)}
+                                            disabled={!!exporting}
+                                            title="Export Excel"
+                                            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-foreground/10 transition-colors disabled:opacity-40"
+                                        >
+                                            {exporting === `${activeTab}-excel`
+                                                ? <RefreshCcw className="w-4 h-4 text-emerald-500 animate-spin" />
+                                                : <PieIcon className="w-4 h-4 text-emerald-500" />}
+                                        </button>
+                                        <button
+                                            onClick={() => handleExport('sheets', activeTab)}
+                                            disabled={!!exporting}
+                                            title="Export to Google Sheets"
+                                            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-foreground/10 transition-colors disabled:opacity-40"
+                                        >
+                                            {exporting === `${activeTab}-sheets`
+                                                ? <RefreshCcw className="w-4 h-4 text-blue-500 animate-spin" />
+                                                : <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_logo_%282014-2020%29.svg" className="w-4 h-4 opacity-80" alt="Google Sheets" />}
+                                        </button>
+                                    </div>
+
+                                    <div className="w-px h-5 bg-border mx-1" />
+
+                                    <Link
+                                        href="/admin/analytics/reports"
+                                        className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:hover:bg-foreground/10 text-foreground font-black text-[10px] uppercase tracking-widest rounded-xl transition-all"
                                     >
-                                        <option value="" className="bg-card">All Departments</option>
-                                        {departments.map((dept) => (
-                                            <option key={dept} value={dept} className="bg-card">{dept}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-foreground/40 pointer-events-none" />
+                                        <BellRing className="w-3.5 h-3.5" />
+                                        Schedule
+                                    </Link>
                                 </div>
 
-                                <div className="w-px h-5 bg-border mx-1" />
-
-                                <div className="flex gap-1">
-                                    <button onClick={() => handleExport('pdf', activeTab)} disabled={!!exporting} className="p-2 rounded-xl hover:bg-slate-100 dark:bg-foreground/5 transition-colors" title="Export PDF">
-                                        <FileText className="w-4 h-4 text-red-500" />
-                                    </button>
-                                    <button onClick={() => handleExport('excel', activeTab)} disabled={!!exporting} className="p-2 rounded-xl hover:bg-slate-100 dark:bg-foreground/5 transition-colors" title="Export Excel">
-                                        <PieIcon className="w-4 h-4 text-emerald-500" />
-                                    </button>
-                                    <button onClick={() => handleExport('sheets', activeTab)} disabled={!!exporting} className="p-2 rounded-xl hover:bg-slate-100 dark:bg-foreground/5 transition-colors" title="Export Sheets">
-                                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_logo_%282014-2020%29.svg" className="w-4 h-4 opacity-80" alt="Sheets" />
-                                    </button>
-                                </div>
-                                
-                                <div className="w-px h-5 bg-border mx-1" />
-
-                                <Link
-                                    href="/admin/analytics/reports"
-                                    className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-foreground/5 hover:bg-slate-200 dark:bg-foreground/10 text-foreground font-black text-[10px] uppercase tracking-widest rounded-xl transition-all"
-                                >
-                                    <BellRing className="w-3.5 h-3.5" />
-                                    Schedule
-                                </Link>
+                                {/* Custom date range inputs — only shown when 'custom' is selected */}
+                                {timeRange === 'custom' && (
+                                    <div className="flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl border border-blue-500/30 shadow-sm">
+                                        <span className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">From</span>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="text-[11px] font-bold bg-transparent text-foreground border border-slate-200 dark:border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                        />
+                                        <span className="text-[10px] font-black text-slate-500 dark:text-foreground/40 uppercase tracking-widest">To</span>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="text-[11px] font-bold bg-transparent text-foreground border border-slate-200 dark:border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.div>
@@ -412,9 +460,17 @@ export default function AnalyticsDashboard() {
                     )}
 
                     {error && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-300 rounded-2xl flex items-center gap-3 backdrop-blur-md">
-                            <AlertCircle className="w-5 h-5" />
-                            <p className="font-black text-xs uppercase tracking-widest">{error}</p>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8 p-4 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-300 rounded-2xl flex items-center justify-between gap-3 backdrop-blur-md">
+                            <div className="flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                                <p className="font-bold text-xs">{error}</p>
+                            </div>
+                            <button
+                                onClick={() => { setError(null); fetchData(); }}
+                                className="flex-shrink-0 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-300 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5"
+                            >
+                                <RefreshCcw className="w-3 h-3" /> Retry
+                            </button>
                         </motion.div>
                     )}
 

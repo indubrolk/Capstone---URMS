@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import NewBookingModal from "@/components/NewBookingModal";
+import { supabase } from "@/lib/supabase";
 import {
     Plus,
     Search,
@@ -11,226 +12,761 @@ import {
     Clock,
     MapPin,
     MoreVertical,
-    CheckCircle2,
-    Clock4,
-    XCircle,
-    CalendarCheck,
-    ChevronRight,
     ChevronLeft,
-    TrendingUp
+    ChevronRight
 } from "lucide-react";
+
+type CalendarView = "week" | "month";
+type AvailabilityStatus = "Available" | "Limited" | "Booked";
+
+interface ResourceItem {
+    id: string;
+    name: string;
+    type: string;
+    location: string;
+    availability_status: string;
+}
+
+interface BookingResource {
+    id: string;
+    name: string;
+    type: string;
+    location: string;
+}
+
+interface BookingRow {
+    id: string;
+    resource_id: string;
+    start_time: string;
+    end_time: string;
+    status: string;
+    resources?: BookingResource | BookingResource[] | null;
+}
+
+interface DaySummary {
+    status: AvailabilityStatus;
+    bookingCount: number;
+    bookedResources: number;
+    totalResources: number;
+}
+
+const WORKDAY_START_HOUR = 8;
+const WORKDAY_END_HOUR = 17;
+const ALL_RESOURCES_LIMITED_THRESHOLD = 0.3;
+const ALL_RESOURCES_BOOKED_THRESHOLD = 0.7;
+const SINGLE_RESOURCE_LIMITED_THRESHOLD = 0.1;
+const SINGLE_RESOURCE_BOOKED_THRESHOLD = 0.85;
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const startOfDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const toDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
+const addDays = (date: Date, amount: number) => {
+    const next = new Date(date);
+    next.setDate(next.getDate() + amount);
+    return next;
+};
+
+const getStartOfWeek = (date: Date) => {
+    const start = startOfDay(date);
+    const day = start.getDay();
+    const diff = (day + 6) % 7;
+    start.setDate(start.getDate() - diff);
+    return start;
+};
+
+const buildWeek = (date: Date) => {
+    const start = getStartOfWeek(date);
+    return Array.from({ length: 7 }, (_, idx) => addDays(start, idx));
+};
+
+const buildMonthGrid = (date: Date) => {
+    const firstOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const gridStart = getStartOfWeek(firstOfMonth);
+    return Array.from({ length: 42 }, (_, idx) => addDays(gridStart, idx));
+};
+
+const formatDateLabel = (value: string) =>
+    new Date(value).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+
+const formatTimeLabel = (value: string) =>
+    new Date(value).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    });
+
+const getBookingResource = (booking: BookingRow) => {
+    if (!booking.resources) return null;
+    return Array.isArray(booking.resources)
+        ? booking.resources[0] || null
+        : booking.resources;
+};
+
+const getOverlapMinutes = (
+    start: Date,
+    end: Date,
+    windowStart: Date,
+    windowEnd: Date
+) => {
+    const startMs = Math.max(start.getTime(), windowStart.getTime());
+    const endMs = Math.min(end.getTime(), windowEnd.getTime());
+    return Math.max(0, (endMs - startMs) / 60000);
+};
+
+const getAvailabilityClasses = (status: AvailabilityStatus) => {
+    if (status === "Available") {
+        return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+    }
+    if (status === "Limited") {
+        return "bg-amber-50 text-amber-700 border border-amber-100";
+    }
+    return "bg-rose-50 text-rose-700 border border-rose-100";
+};
+
+const normalizeBookingStatus = (status: string) => {
+    if (status === "Approved") return "Confirmed";
+    if (status === "Pending") return "Pending";
+    if (status === "Cancelled") return "Cancelled";
+    if (status === "Completed") return "Completed";
+    return status;
+};
+
+const getBookingStatusClasses = (statusLabel: string) => {
+    if (statusLabel === "Confirmed") {
+        return "bg-emerald-50 text-emerald-600 border border-emerald-100";
+    }
+    if (statusLabel === "Pending") {
+        return "bg-amber-50 text-amber-600 border border-amber-100";
+    }
+    if (statusLabel === "Cancelled") {
+        return "bg-red-50 text-red-600 border border-red-100";
+    }
+    return "bg-slate-100 text-slate-600 border border-slate-200";
+};
 
 export default function BookingsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [resources, setResources] = useState<ResourceItem[]>([]);
+    const [bookings, setBookings] = useState<BookingRow[]>([]);
+    const [loadingResources, setLoadingResources] = useState(true);
+    const [loadingBookings, setLoadingBookings] = useState(true);
+    const [resourceError, setResourceError] = useState<string | null>(null);
+    const [bookingError, setBookingError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [calendarView, setCalendarView] = useState<CalendarView>("month");
+    const [activeDate, setActiveDate] = useState(() => new Date());
+    const [selectedResourceId, setSelectedResourceId] = useState("all");
+    const [refreshSignal, setRefreshSignal] = useState(0);
 
-    const stats = [
-        { label: "Total Bookings", value: "128", trend: "+12%", icon: <CalendarCheck className="w-5 h-5 text-blue-600" />, bg: "bg-blue-50", border: "border-blue-100" },
-        { label: "Pending", value: "14", trend: "-2%", icon: <Clock4 className="w-5 h-5 text-amber-600" />, bg: "bg-amber-50", border: "border-amber-100" },
-        { label: "Confirmed", value: "109", trend: "+15%", icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />, bg: "bg-emerald-50", border: "border-emerald-100" },
-        { label: "Cancelled", value: "5", trend: "-5%", icon: <XCircle className="w-5 h-5 text-red-600" />, bg: "bg-red-50", border: "border-red-100" },
-    ];
+    const calendarDays = useMemo(
+        () =>
+            calendarView === "week"
+                ? buildWeek(activeDate)
+                : buildMonthGrid(activeDate),
+        [calendarView, activeDate]
+    );
 
-    const bookings = [
-        { title: "Advanced Robotics Lab", faculty: "Engineering", date: "Mar 12, 2026", time: "09:00 - 12:00", status: "Confirmed", image: "https://images.unsplash.com/photo-1581092334397-e9d49c5bb038?auto=format&fit=crop&q=80&w=100&h=100" },
-        { title: "Organic Chemistry Lab", faculty: "Science", date: "Mar 13, 2026", time: "14:00 - 17:00", status: "Pending", image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&q=80&w=100&h=100" },
-        { title: "Lecture Hall A1", faculty: "Business", date: "Mar 15, 2026", time: "08:00 - 10:00", status: "Confirmed", image: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=100&h=100" },
-        { title: "Fluid Mechanics Lab", faculty: "Engineering", date: "Mar 18, 2026", time: "11:00 - 13:00", status: "Cancelled", image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=100&h=100" },
-        { title: "Computer Science Lab 3", faculty: "Computing", date: "Mar 20, 2026", time: "10:00 - 12:00", status: "Confirmed", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=100&h=100" },
-    ];
+    const calendarRange = useMemo(() => {
+        if (calendarDays.length === 0) return null;
+        const rangeStart = startOfDay(calendarDays[0]);
+        const rangeEnd = startOfDay(addDays(calendarDays[calendarDays.length - 1], 1));
+        return { rangeStart, rangeEnd };
+    }, [calendarDays]);
+
+    const rangeStartIso = calendarRange?.rangeStart.toISOString() ?? null;
+    const rangeEndIso = calendarRange?.rangeEnd.toISOString() ?? null;
+
+    const calendarLabel = useMemo(() => {
+        if (!calendarRange) return "";
+        if (calendarView === "month") {
+            return activeDate.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+            });
+        }
+        const start = calendarRange.rangeStart;
+        const end = addDays(calendarRange.rangeStart, 6);
+        const startLabel = start.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+        });
+        const endLabel = end.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+        });
+        const yearLabel = end.toLocaleDateString("en-US", { year: "numeric" });
+        return `${startLabel} - ${endLabel}, ${yearLabel}`;
+    }, [calendarView, calendarRange, activeDate]);
+
+    const calendarSubLabel = useMemo(() => {
+        if (!calendarRange) return "";
+        if (calendarView === "month") return "Availability by day";
+        const start = calendarRange.rangeStart;
+        const end = addDays(calendarRange.rangeStart, 6);
+        const startLabel = start.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+        });
+        const endLabel = end.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+        });
+        return `Week of ${startLabel} - ${endLabel}`;
+    }, [calendarView, calendarRange]);
+
+    useEffect(() => {
+        let isActive = true;
+        const loadResources = async () => {
+            setLoadingResources(true);
+            setResourceError(null);
+            try {
+                const { data, error } = await supabase
+                    .from("resources")
+                    .select("id, name, type, location, availability_status")
+                    .order("name");
+                if (error) throw error;
+                if (isActive) setResources((data as ResourceItem[]) || []);
+            } catch (err: any) {
+                if (isActive) {
+                    setResourceError(err.message || "Failed to load resources.");
+                }
+            } finally {
+                if (isActive) setLoadingResources(false);
+            }
+        };
+        loadResources();
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!rangeStartIso || !rangeEndIso) return;
+        let isActive = true;
+        const loadBookings = async () => {
+            setLoadingBookings(true);
+            setBookingError(null);
+            try {
+                let query = supabase
+                    .from("bookings")
+                    .select(
+                        "id, resource_id, start_time, end_time, status, resources ( id, name, type, location )"
+                    )
+                    .lt("start_time", rangeEndIso)
+                    .gt("end_time", rangeStartIso)
+                    .order("start_time", { ascending: true });
+
+                if (selectedResourceId !== "all") {
+                    query = query.eq("resource_id", selectedResourceId);
+                }
+
+                const { data, error } = await query;
+                if (error) throw error;
+                if (isActive) setBookings((data as BookingRow[]) || []);
+            } catch (err: any) {
+                if (isActive) {
+                    setBookingError(err.message || "Failed to load bookings.");
+                }
+            } finally {
+                if (isActive) setLoadingBookings(false);
+            }
+        };
+        loadBookings();
+        return () => {
+            isActive = false;
+        };
+    }, [rangeStartIso, rangeEndIso, selectedResourceId, refreshSignal]);
+
+    const daySummaries = useMemo(() => {
+        const summaries = new Map<string, DaySummary>();
+        if (calendarDays.length === 0) return summaries;
+
+        const relevantResources =
+            selectedResourceId === "all"
+                ? resources
+                : resources.filter((resource) => resource.id === selectedResourceId);
+        const totalResources = relevantResources.length;
+
+        for (const day of calendarDays) {
+            const dayStart = startOfDay(day);
+            const dayEnd = addDays(dayStart, 1);
+            const workStart = new Date(dayStart);
+            workStart.setHours(WORKDAY_START_HOUR, 0, 0, 0);
+            const workEnd = new Date(dayStart);
+            workEnd.setHours(WORKDAY_END_HOUR, 0, 0, 0);
+
+            let bookingCount = 0;
+            let bookedMinutes = 0;
+            const bookedResources = new Set<string>();
+
+            for (const booking of bookings) {
+                if (booking.status === "Cancelled") continue;
+                if (
+                    selectedResourceId !== "all" &&
+                    booking.resource_id !== selectedResourceId
+                ) {
+                    continue;
+                }
+
+                const bookingStart = new Date(booking.start_time);
+                const bookingEnd = new Date(booking.end_time);
+
+                if (bookingStart >= dayEnd || bookingEnd <= dayStart) continue;
+
+                bookingCount += 1;
+                bookedResources.add(booking.resource_id);
+
+                if (selectedResourceId !== "all") {
+                    bookedMinutes += getOverlapMinutes(
+                        bookingStart,
+                        bookingEnd,
+                        workStart,
+                        workEnd
+                    );
+                }
+            }
+
+            let status: AvailabilityStatus = "Available";
+            if (selectedResourceId === "all") {
+                const ratio =
+                    totalResources > 0
+                        ? bookedResources.size / totalResources
+                        : 0;
+                status =
+                    ratio >= ALL_RESOURCES_BOOKED_THRESHOLD
+                        ? "Booked"
+                        : ratio >= ALL_RESOURCES_LIMITED_THRESHOLD
+                            ? "Limited"
+                            : "Available";
+            } else {
+                const workMinutes = Math.max(
+                    0,
+                    (WORKDAY_END_HOUR - WORKDAY_START_HOUR) * 60
+                );
+                status =
+                    bookedMinutes >= workMinutes * SINGLE_RESOURCE_BOOKED_THRESHOLD
+                        ? "Booked"
+                        : bookedMinutes >= workMinutes * SINGLE_RESOURCE_LIMITED_THRESHOLD
+                            ? "Limited"
+                            : "Available";
+            }
+
+            summaries.set(toDateKey(dayStart), {
+                status,
+                bookingCount,
+                bookedResources: bookedResources.size,
+                totalResources,
+            });
+        }
+
+        return summaries;
+    }, [calendarDays, bookings, resources, selectedResourceId]);
+
+    const filteredBookings = useMemo(() => {
+        if (!searchQuery) return bookings;
+        const q = searchQuery.toLowerCase();
+        return bookings.filter((booking) => {
+            const resource = getBookingResource(booking);
+            const name = resource?.name || "";
+            const location = resource?.location || "";
+            const type = resource?.type || "";
+            return (
+                name.toLowerCase().includes(q) ||
+                location.toLowerCase().includes(q) ||
+                type.toLowerCase().includes(q)
+            );
+        });
+    }, [bookings, searchQuery]);
+
+    const totalBookings = bookings.length;
+    const shownBookings = filteredBookings.length;
+    const todayKey = toDateKey(new Date());
+    const combinedError = [resourceError, bookingError]
+        .filter(Boolean)
+        .join(" ");
+
+    const handlePrev = () => {
+        setActiveDate((current) => {
+            const next = new Date(current);
+            if (calendarView === "month") {
+                next.setMonth(next.getMonth() - 1);
+            } else {
+                next.setDate(next.getDate() - 7);
+            }
+            return next;
+        });
+    };
+
+    const handleNext = () => {
+        setActiveDate((current) => {
+            const next = new Date(current);
+            if (calendarView === "month") {
+                next.setMonth(next.getMonth() + 1);
+            } else {
+                next.setDate(next.getDate() + 7);
+            }
+            return next;
+        });
+    };
+
+    const handleToday = () => {
+        setActiveDate(new Date());
+    };
+
+    const handleBookingRefresh = () => {
+        setRefreshSignal((value) => value + 1);
+    };
 
     return (
         <ProtectedRoute>
-            <div className="min-h-screen bg-slate-50 overflow-x-hidden">
-                <style>{`
-                    @keyframes slide-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-                    .s1 { animation: slide-up .5s ease .05s both; }
-                    .s2 { animation: slide-up .5s ease .15s both; }
-                    .s3 { animation: slide-up .5s ease .25s both; }
-                    .ch { transition: all .25s cubic-bezier(.4,0,.2,1); }
-                    .ch:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,.08); }
-                    .row-hover { transition: all .2s ease; }
-                    .row-hover:hover { background-color: #f8fafc; transform: scale-[1.01]; box-shadow: 0 4px 12px rgba(0,0,0,.05); border-radius: 1rem; z-index: 10; position: relative; border-color: transparent; }
-                `}</style>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Resource Bookings</h1>
+                        <p className="text-slate-500 font-medium">Manage and monitor facility schedules across all university faculties.</p>
+                    </div>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 bg-brand-primary text-white font-bold px-6 py-3 rounded-2xl hover:bg-brand-secondary transition-all shadow-lg active:scale-95 whitespace-nowrap"
+                    >
+                        <Plus className="w-5 h-5" />
+                        New Booking
+                    </button>
+                </header>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-                    
-                    {/* ══════════════════════════════════════════════
-                        HERO SECTION
-                    ══════════════════════════════════════════════ */}
-                    <div className="s1 relative overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-700 to-blue-800 rounded-[2.5rem] p-8 sm:p-10 text-white shadow-2xl shadow-indigo-500/20">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4" />
-                        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, white 2px, transparent 2px)", backgroundSize: "32px 32px" }} />
+                {combinedError && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-semibold">
+                        {combinedError}
+                    </div>
+                )}
 
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                {/* Availability Calendar */}
+                <section className="mb-8">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+                        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 mb-6">
                             <div>
-                                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-4 backdrop-blur-md">
-                                    <CalendarCheck className="w-4 h-4 text-indigo-200" />
-                                    <span className="text-indigo-100 text-xs font-bold tracking-wide uppercase">Reservations</span>
-                                </div>
-                                <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2 leading-tight">
-                                    Resource Bookings
-                               </h1>
-                                <p className="text-indigo-100/90 font-medium text-lg max-w-xl">
-                                    Manage, track, and schedule facility reservations across all university faculties in real-time.
-                                </p>
+                                <h2 className="text-xl font-black text-slate-900">Booking Availability</h2>
+                                <p className="text-sm font-medium text-slate-500">{calendarSubLabel}</p>
                             </div>
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="group shrink-0 inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-black px-8 py-4 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300"
-                            >
-                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
-                                    <Plus className="w-5 h-5" />
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex items-center gap-2 px-2 py-1.5 border border-slate-200 rounded-xl bg-slate-50">
+                                    <button
+                                        onClick={handlePrev}
+                                        className="p-1.5 rounded-lg hover:bg-white transition-colors text-slate-500"
+                                        aria-label="Previous"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-sm font-bold text-slate-700 whitespace-nowrap">{calendarLabel}</span>
+                                    <button
+                                        onClick={handleNext}
+                                        className="p-1.5 rounded-lg hover:bg-white transition-colors text-slate-500"
+                                        aria-label="Next"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={handleToday}
+                                        className="px-2.5 py-1 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                                    >
+                                        Today
+                                    </button>
                                 </div>
-                                New Booking
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* ══════════════════════════════════════════════
-                        STATS GRID
-                    ══════════════════════════════════════════════ */}
-                    <div className="s2 grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {stats.map((stat, i) => (
-                            <div key={i} className={`ch bg-white rounded-3xl border ${stat.border} p-6 shadow-sm relative overflow-hidden group`}>
-                                <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${stat.bg} opacity-50 group-hover:scale-150 transition-transform duration-500`} />
-                                <div className="relative z-10 flex items-start justify-between mb-4">
-                                    <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center`}>
-                                        {stat.icon}
-                                    </div>
-                                    <span className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${stat.trend.startsWith('+') ? 'text-emerald-700 bg-emerald-100' : 'text-red-700 bg-red-100'}`}>
-                                        <TrendingUp className={`w-3 h-3 ${stat.trend.startsWith('-') && 'rotate-180'}`} />
-                                        {stat.trend}
-                                    </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCalendarView("week")}
+                                        className={`px-3 py-2 border rounded-xl text-xs font-bold transition-colors ${calendarView === "week"
+                                            ? "bg-brand-primary text-white border-brand-primary"
+                                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                    >
+                                        Week
+                                    </button>
+                                    <button
+                                        onClick={() => setCalendarView("month")}
+                                        className={`px-3 py-2 border rounded-xl text-xs font-bold transition-colors ${calendarView === "month"
+                                            ? "bg-brand-primary text-white border-brand-primary"
+                                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                    >
+                                        Month
+                                    </button>
                                 </div>
-                                <p className="relative z-10 text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
-                                <p className="relative z-10 text-xs font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* ══════════════════════════════════════════════
-                        MAIN CONTENT AREA
-                    ══════════════════════════════════════════════ */}
-                    <div className="s3 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-4 sm:p-8">
-                        
-                        {/* Toolbar */}
-                        <div className="flex flex-col lg:flex-row gap-4 mb-8">
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by facility name, faculty, or booking ID..."
-                                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-600/10 focus:border-indigo-600/30 transition-all hover:bg-slate-100/50"
-                                />
-                            </div>
-                            <div className="flex gap-3">
-                                <button className="flex items-center gap-2 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
-                                    <Filter className="w-4 h-4" />
-                                    Filter
-                                </button>
-                                <button className="flex items-center gap-2 px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-indigo-600 transition-colors">
-                                    <Calendar className="w-4 h-4" />
-                                    Select Date
-                                </button>
+                                <select
+                                    value={selectedResourceId}
+                                    onChange={(e) => setSelectedResourceId(e.target.value)}
+                                    disabled={loadingResources}
+                                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 bg-slate-50 hover:bg-white transition-colors min-w-[180px]"
+                                >
+                                    <option value="all">
+                                        {loadingResources ? "Loading resources..." : "All resources"}
+                                    </option>
+                                    {resources.map((resource) => (
+                                        <option key={resource.id} value={resource.id}>
+                                            {resource.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
-                        {/* List View */}
-                        <div className="space-y-2">
-                            {/* Header row */}
-                            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                                <div className="col-span-5">Resource Details</div>
-                                <div className="col-span-3">Schedule</div>
-                                <div className="col-span-3">Status</div>
-                                <div className="col-span-1 text-right">Actions</div>
+                        {loadingBookings ? (
+                            <div className="py-12 text-center text-sm font-semibold text-slate-400">
+                                Loading availability...
                             </div>
-
-                            {/* Booking items */}
-                            {bookings.map((booking, idx) => (
-                                <div key={idx} className="row-hover grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 border border-slate-100 md:border-transparent rounded-2xl bg-white">
-                                    
-                                    {/* Resource Info */}
-                                    <div className="col-span-1 md:col-span-5 flex items-center gap-4">
-                                        <img 
-                                            src={booking.image} 
-                                            alt={booking.title} 
-                                            className="w-14 h-14 rounded-xl object-cover shadow-sm bg-slate-100 shrink-0"
-                                        />
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-bold text-slate-900 truncate">{booking.title}</p>
-                                            <div className="flex items-center gap-1.5 mt-1 text-xs font-semibold text-slate-500">
-                                                <MapPin className="w-3.5 h-3.5" />
-                                                <span className="truncate">Faculty of {booking.faculty}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Date & Time */}
-                                    <div className="col-span-1 md:col-span-3">
-                                        <div className="inline-flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                                                <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                                                {booking.date}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500">
-                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                {booking.time}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Status Badge */}
-                                    <div className="col-span-1 md:col-span-3">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border ${
-                                            booking.status === "Confirmed" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                            booking.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                            "bg-red-50 text-red-700 border-red-200"
-                                        }`}>
-                                            {booking.status === "Confirmed" && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                            {booking.status === "Pending" && <Clock4 className="w-3.5 h-3.5" />}
-                                            {booking.status === "Cancelled" && <XCircle className="w-3.5 h-3.5" />}
-                                            {booking.status}
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-7 gap-2 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                                    {WEEKDAYS.map((label) => (
+                                        <span key={label} className="text-center">
+                                            {label}
                                         </span>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="col-span-1 md:col-span-1 flex justify-end">
-                                        <button className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors shadow-sm">
-                                            <MoreVertical className="w-5 h-5" />
-                                        </button>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                                <div className="grid grid-cols-7 gap-2 mt-2">
+                                    {calendarDays.map((day) => {
+                                        const dayKey = toDateKey(day);
+                                        const summary = daySummaries.get(dayKey);
+                                        const status = summary?.status || "Available";
+                                        const isOutsideMonth =
+                                            calendarView === "month" &&
+                                            day.getMonth() !== activeDate.getMonth();
+                                        const isToday = dayKey === todayKey;
+                                        const bookingCount = summary?.bookingCount || 0;
+                                        const metaText =
+                                            selectedResourceId === "all"
+                                                ? summary && summary.totalResources > 0
+                                                    ? `${summary.bookedResources}/${summary.totalResources} resources booked`
+                                                    : "No resources"
+                                                : bookingCount > 0
+                                                    ? `${bookingCount} booking${bookingCount > 1 ? "s" : ""}`
+                                                    : "Open slots";
+                                        return (
+                                            <div
+                                                key={dayKey}
+                                                className={`rounded-2xl border p-3 min-h-[110px] flex flex-col justify-between ${isOutsideMonth
+                                                    ? "bg-slate-50 text-slate-400 border-slate-100"
+                                                    : "bg-slate-50/60 border-slate-100"
+                                                    } ${isToday
+                                                        ? "ring-2 ring-brand-primary/20"
+                                                        : ""
+                                                    }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span
+                                                        className={`text-sm font-bold ${isOutsideMonth
+                                                            ? "text-slate-400"
+                                                            : "text-slate-800"
+                                                            }`}
+                                                    >
+                                                        {day.getDate()}
+                                                    </span>
+                                                    {bookingCount > 0 && (
+                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                            {bookingCount} booking{bookingCount > 1 ? "s" : ""}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="mt-2">
+                                                    <span
+                                                        className={`inline-flex px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getAvailabilityClasses(status)
+                                                            }`}
+                                                    >
+                                                        {status}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-2 text-[11px] font-semibold text-slate-400">
+                                                    {metaText}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
 
-                        {/* Pagination */}
-                        <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                Showing <span className="text-slate-900">1</span> to <span className="text-slate-900">5</span> of <span className="text-slate-900">28</span> bookings
-                            </p>
-                            <div className="flex gap-2">
-                                <button className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors cursor-not-allowed opacity-50">
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
-                                <button className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors bg-white shadow-sm">
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
-                            </div>
+                        <div className="mt-6 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
+                            <span className="inline-flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                Available
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                Limited
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                                Booked
+                            </span>
                         </div>
+                    </div>
+                </section>
+
+                {/* Filters & Search */}
+                <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm mb-8 flex flex-col lg:flex-row gap-4">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 transition-colors group-focus-within:text-brand-primary" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by resource name, type, or location..."
+                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-primary/10 transition-all"
+                        />
+                    </div>
+                    <div className="flex gap-4">
+                        <button className="flex items-center gap-2 px-5 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                            <Filter className="w-4 h-4" />
+                            Filters
+                        </button>
+                        <button className="flex items-center gap-2 px-5 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                            <Calendar className="w-4 h-4" />
+                            {calendarLabel || "Select range"}
+                        </button>
                     </div>
                 </div>
 
-                {/* New Booking Modal */}
-                <NewBookingModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    onSuccess={() => {
-                        // TODO: Refresh bookings list
-                        console.log("Booking created successfully!");
-                    }}
-                />
+                {/* Bookings Table */}
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-100">
+                                    <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Resource / Facility</th>
+                                    <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Date & Time</th>
+                                    <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Status</th>
+                                    <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {loadingBookings ? (
+                                    <tr>
+                                        <td
+                                            colSpan={4}
+                                            className="px-6 py-10 text-center text-sm font-semibold text-slate-400"
+                                        >
+                                            Loading bookings...
+                                        </td>
+                                    </tr>
+                                ) : filteredBookings.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={4}
+                                            className="px-6 py-10 text-center text-sm font-semibold text-slate-400"
+                                        >
+                                            No bookings found for this range.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredBookings.map((booking) => {
+                                        const statusLabel = normalizeBookingStatus(booking.status);
+                                        const resource = getBookingResource(booking);
+                                        const resourceName =
+                                            resource?.name || "Unknown resource";
+                                        const resourceMeta = resource
+                                            ? `${resource.type} - ${resource.location}`
+                                            : "Resource details unavailable";
+                                        const dateLabel = formatDateLabel(booking.start_time);
+                                        const timeLabel = `${formatTimeLabel(
+                                            booking.start_time
+                                        )} - ${formatTimeLabel(booking.end_time)}`;
+
+                                        return (
+                                            <tr
+                                                key={booking.id}
+                                                className="hover:bg-slate-50/50 transition-colors group"
+                                            >
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-2xl bg-brand-primary/5 flex items-center justify-center">
+                                                            <MapPin className="w-5 h-5 text-brand-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900">
+                                                                {resourceName}
+                                                            </p>
+                                                            <p className="text-xs font-medium text-slate-500 italic">
+                                                                {resourceMeta}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            {dateLabel}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            {timeLabel}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <span
+                                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${getBookingStatusClasses(
+                                                            statusLabel
+                                                        )}`}
+                                                    >
+                                                        {statusLabel}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600">
+                                                        <MoreVertical className="w-5 h-5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-xs font-bold text-slate-500 items-center">
+                            {loadingBookings
+                                ? "Loading bookings..."
+                                : `Showing ${shownBookings} of ${totalBookings} bookings`}
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                disabled
+                                className="px-3 py-1 border border-slate-200 rounded-lg text-xs font-bold bg-white text-slate-400 cursor-not-allowed"
+                            >
+                                Prev
+                            </button>
+                            <button
+                                disabled
+                                className="px-3 py-1 border border-slate-200 rounded-lg text-xs font-bold bg-white text-slate-400 cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            {/* New Booking Modal */}
+            <NewBookingModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={handleBookingRefresh}
+            />
         </ProtectedRoute>
     );
 }
+

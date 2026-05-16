@@ -53,13 +53,6 @@ if (!supabaseServiceKey) {
 const activeKey = supabaseServiceKey || supabaseAnonKey;
 
 /**
- * Singleton Supabase client (using Service Role key for full access).
- */
-export const supabase: SupabaseClient = createClient(
-    supabaseUrl || '',
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-/**
  * Singleton Supabase client.
  * Uses the service role key to bypass RLS for backend operations.
  */

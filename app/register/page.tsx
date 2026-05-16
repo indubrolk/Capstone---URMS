@@ -89,6 +89,9 @@ export default function RegisterPage() {
 
         setLoading(true);
         try {
+            if (!auth) {
+                throw new Error("Authentication service is not available. Please try again later.");
+            }
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const uid = userCredential.user.uid;
 
@@ -442,6 +445,8 @@ export default function RegisterPage() {
                 </div>
             </div>
         </div>
-    </div>
+        </div>
     );
 }
+
+
